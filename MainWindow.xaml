@@ -1,0 +1,45 @@
+<Window x:Class="endfield_player_position_display.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:endfield_player_position_display"
+        mc:Ignorable="d"
+        Title="Endfield Position"
+        Width="150"
+        MinWidth="150"
+        SizeToContent="Height"
+        ResizeMode="NoResize"
+        Topmost="True"
+        WindowStartupLocation="CenterScreen"
+        Background="#202124">
+    <Border Padding="10" Background="#202124">
+        <Grid>
+            <TextBlock x:Name="StatusText"
+                       Foreground="#E8EAED"
+                       FontSize="12"
+                       Text="正在连接..."
+                       TextWrapping="Wrap"
+                       TextTrimming="CharacterEllipsis" />
+
+            <Grid x:Name="PositionPanel" Visibility="Collapsed">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="20" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="18" />
+                    <RowDefinition Height="18" />
+                    <RowDefinition Height="18" />
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Grid.Column="0" Foreground="#9AA0A6" FontSize="12" Text="X" />
+                <TextBlock x:Name="XText" Grid.Row="0" Grid.Column="1" Foreground="#FFFFFF" FontFamily="Consolas" FontSize="12" Text="-" TextAlignment="Right" />
+                <TextBlock Grid.Row="1" Grid.Column="0" Foreground="#9AA0A6" FontSize="12" Text="Y" />
+                <TextBlock x:Name="YText" Grid.Row="1" Grid.Column="1" Foreground="#FFFFFF" FontFamily="Consolas" FontSize="12" Text="-" TextAlignment="Right" />
+                <TextBlock Grid.Row="2" Grid.Column="0" Foreground="#9AA0A6" FontSize="12" Text="Z" />
+                <TextBlock x:Name="ZText" Grid.Row="2" Grid.Column="1" Foreground="#FFFFFF" FontFamily="Consolas" FontSize="12" Text="-" TextAlignment="Right" />
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

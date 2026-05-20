@@ -1,0 +1,13 @@
+﻿## 终末地实时坐标显示  
+### 介绍  
+> 该工具以森空岛地图工具API制作，能够打开一个窗口，实时显示玩家在终末地的坐标，方便玩家在终末地中导航。  
+
+## 用法
+1. 下载`endfield-player-position-display.exe`可执行文件，放在任意目录  
+2. 在相同目录新建`token.txt`文本文件  
+3. 打开[森空岛官网](https://www.skland.com/)并登录  
+4. 登录完成后打开[这个网址](https://web-api.skland.com/account/info/hg)，然后复制`content`后面引号内的字符串（不包含引号），填入`token.txt`中（注意此`token`不要泄漏给别人）  
+5. 打开`endfield-player-position-display.exe`，正常情况下即可看到玩家在终末地的坐标显示了。  
+
+## 说明
+> 本工具是整理框架后由AI生成代码的。  
