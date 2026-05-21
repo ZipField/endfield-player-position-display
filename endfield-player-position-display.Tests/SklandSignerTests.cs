@@ -4,6 +4,15 @@ namespace endfield_player_position_display.Tests
 {
     internal static class SklandSignerTests
     {
+        public static void CreateHeaderJsonUsesAcceptedClientHeaderValues()
+        {
+            string headerJson = SklandSigner.CreateHeaderJson("1779204182");
+
+            TestAssert.AreEqual(
+                "{\"platform\":\"\",\"timestamp\":\"1779204182\",\"dId\":\"\",\"vName\":\"\"}",
+                headerJson);
+        }
+
         public static void CreateSignReturnsMd5OfHmacSha256Hex()
         {
             string sign = SklandSigner.CreateSign(

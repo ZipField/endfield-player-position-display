@@ -17,6 +17,7 @@ namespace endfield_player_position_display.Services
         private const string BindingPath = "/api/v1/game/player/binding";
         private const string WebSocketTokenPath = "/api/v1/websocket/token";
         private const string ZonaiBaseUrl = "https://zonai.skland.com";
+        internal const int SignedRequestTimestampOffsetSeconds = -3;
 
         private readonly HttpClient httpClient;
         private readonly bool ownsClient;
@@ -195,7 +196,7 @@ namespace endfield_player_position_display.Services
 
         private async Task<string> GetSignedAsync(string url, string path, CredentialResult credential, CancellationToken cancellationToken)
         {
-            string timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+            string timestamp = CreateSignedRequestTimestamp(DateTimeOffset.UtcNow);
             string headerJson = SklandSigner.CreateHeaderJson(timestamp);
             string sign = SklandSigner.CreateSign(path, GetQueryForSigning(url), timestamp, headerJson, credential.Token);
 
@@ -220,6 +221,11 @@ namespace endfield_player_position_display.Services
                     return responseJson;
                 }
             }
+        }
+
+        internal static string CreateSignedRequestTimestamp(DateTimeOffset now)
+        {
+            return now.AddSeconds(SignedRequestTimestampOffsetSeconds).ToUnixTimeSeconds().ToString();
         }
 
         private IDictionary<string, object> DeserializeObject(string json)

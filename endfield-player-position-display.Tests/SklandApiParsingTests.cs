@@ -5,6 +5,15 @@ namespace endfield_player_position_display.Tests
 {
     internal static class SklandApiParsingTests
     {
+        public static void CreateSignedRequestTimestampUsesServerAcceptedClockSkew()
+        {
+            var now = DateTimeOffset.FromUnixTimeSeconds(1779204182);
+
+            string timestamp = SklandApiClient.CreateSignedRequestTimestamp(now);
+
+            TestAssert.AreEqual("1779204179", timestamp);
+        }
+
         public static void ParseRoleBindingExtractsFirstEndfieldDefaultRole()
         {
             string json = "{\"code\":0,\"message\":\"OK\",\"data\":{\"list\":[{\"appCode\":\"other\",\"bindingList\":[]},{\"appCode\":\"endfield\",\"bindingList\":[{\"defaultRole\":{\"serverId\":\"1\",\"roleId\":\"1538309069\"}}]}]}}";
