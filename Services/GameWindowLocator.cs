@@ -18,14 +18,26 @@ namespace endfield_player_position_display.Services
                     continue;
                 }
 
-                NativeRect nativeRect;
-                if (GetWindowRect(handle, out nativeRect))
+                NativeRect clientRect;
+                NativePoint clientTopLeft = new NativePoint();
+                if (GetClientRect(handle, out clientRect) && ClientToScreen(handle, ref clientTopLeft))
                 {
                     rect = new Rect(
-                        nativeRect.Left,
-                        nativeRect.Top,
-                        nativeRect.Right - nativeRect.Left,
-                        nativeRect.Bottom - nativeRect.Top);
+                        clientTopLeft.X,
+                        clientTopLeft.Y,
+                        clientRect.Right - clientRect.Left,
+                        clientRect.Bottom - clientRect.Top);
+                    return true;
+                }
+
+                NativeRect windowRect;
+                if (GetWindowRect(handle, out windowRect))
+                {
+                    rect = new Rect(
+                        windowRect.Left,
+                        windowRect.Top,
+                        windowRect.Right - windowRect.Left,
+                        windowRect.Bottom - windowRect.Top);
                     return true;
                 }
             }
@@ -36,6 +48,12 @@ namespace endfield_player_position_display.Services
         [DllImport("user32.dll")]
         private static extern bool GetWindowRect(IntPtr hwnd, out NativeRect rect);
 
+        [DllImport("user32.dll")]
+        private static extern bool GetClientRect(IntPtr hwnd, out NativeRect rect);
+
+        [DllImport("user32.dll")]
+        private static extern bool ClientToScreen(IntPtr hwnd, ref NativePoint point);
+
         [StructLayout(LayoutKind.Sequential)]
         private struct NativeRect
         {
@@ -43,6 +61,13 @@ namespace endfield_player_position_display.Services
             public int Top;
             public int Right;
             public int Bottom;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct NativePoint
+        {
+            public int X;
+            public int Y;
         }
     }
 }

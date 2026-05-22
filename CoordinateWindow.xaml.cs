@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Media;
+using System.Windows.Media.Effects;
 using endfield_player_position_display.Services;
 using endfield_player_position_display.ViewModels;
 
@@ -70,6 +71,7 @@ namespace endfield_player_position_display
             Brush foreground = followMode ? Brushes.White : new SolidColorBrush(Color.FromRgb(232, 234, 237));
             Brush labelForeground = followMode ? Brushes.White : new SolidColorBrush(Color.FromRgb(154, 160, 166));
             StatusText.Foreground = viewModel.IsError ? new SolidColorBrush(Color.FromRgb(255, 180, 171)) : foreground;
+            StatusText.Effect = followMode ? CreateTextOutlineEffect() : null;
 
             foreach (UIElement child in PositionPanel.Children)
             {
@@ -81,13 +83,11 @@ namespace endfield_player_position_display
                         : labelForeground;
                     if (followMode)
                     {
-                        textBlock.Effect = new System.Windows.Media.Effects.DropShadowEffect
-                        {
-                            Color = Color.FromRgb(45, 45, 45),
-                            BlurRadius = 2,
-                            ShadowDepth = 0,
-                            Opacity = 1
-                        };
+                        textBlock.Effect = CreateTextOutlineEffect();
+                    }
+                    else
+                    {
+                        textBlock.Effect = null;
                     }
                 }
             }
@@ -105,6 +105,17 @@ namespace endfield_player_position_display
             XText.Text = CoordinateFormatter.Format(viewModel.CurrentPosition.X);
             YText.Text = CoordinateFormatter.Format(viewModel.CurrentPosition.Y);
             ZText.Text = CoordinateFormatter.Format(viewModel.CurrentPosition.Z);
+        }
+
+        private static Effect CreateTextOutlineEffect()
+        {
+            return new DropShadowEffect
+            {
+                Color = Color.FromRgb(25, 25, 25),
+                BlurRadius = 5,
+                ShadowDepth = 0,
+                Opacity = 1
+            };
         }
 
         private void CoordinateWindowClosed(object sender, EventArgs e)
