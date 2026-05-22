@@ -33,7 +33,9 @@ namespace endfield_player_position_display.Tests
                 ZiplineMatcherTests.FindNearestMatchesTopLeftAsEast,
                 ZiplineMatcherTests.FindNearestReturnsNoMatchBeyondThreeMeters,
                 ZiplineMatcherTests.FindNearestChoosesClosestCandidate,
-                ZiplineMatcherTests.FormatsCopyValues
+                ZiplineMatcherTests.FormatsCopyValues,
+                ClipboardTextServiceTests.TrySetTextRetriesWhenClipboardIsBusy,
+                ClipboardTextServiceTests.TrySetTextReturnsErrorWhenClipboardStaysBusy
             };
 
             int passed = 0;

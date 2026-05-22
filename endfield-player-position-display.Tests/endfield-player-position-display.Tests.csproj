@@ -47,6 +47,7 @@
     <Compile Include="CoordinateFormatterTests.cs" />
     <Compile Include="PositionWebSocketMessageTests.cs" />
     <Compile Include="ZiplineMatcherTests.cs" />
+    <Compile Include="ClipboardTextServiceTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\endfield-player-position-display.csproj">

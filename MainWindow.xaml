@@ -6,7 +6,7 @@
         mc:Ignorable="d"
         Title="终末地坐标工具"
         Width="430"
-        Height="520"
+        Height="570"
         MinWidth="400"
         MinHeight="480"
         ResizeMode="CanMinimize"
@@ -72,6 +72,13 @@
 
                 <GroupBox Header="状态" Padding="12" Margin="0,0,0,12">
                     <StackPanel>
+                        <Button x:Name="ReconnectButton"
+                                Content="重新连接"
+                                Height="30"
+                                HorizontalAlignment="Left"
+                                MinWidth="90"
+                                Click="ReconnectButtonClick"
+                                Margin="0,0,0,10" />
                         <TextBlock x:Name="StatusText"
                                    TextWrapping="Wrap"
                                    Foreground="#1F2328"

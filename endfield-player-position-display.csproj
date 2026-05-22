@@ -83,6 +83,7 @@
     <Compile Include="Models\RoleBinding.cs" />
     <Compile Include="Models\ZiplineLookupResult.cs" />
     <Compile Include="Models\ZiplineMark.cs" />
+    <Compile Include="Services\ClipboardTextService.cs" />
     <Compile Include="Services\CoordinateFormatter.cs" />
     <Compile Include="Services\GameWindowLocator.cs" />
     <Compile Include="Services\GlobalHotkeyService.cs" />

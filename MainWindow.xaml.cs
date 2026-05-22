@@ -17,6 +17,7 @@ namespace endfield_player_position_display
         private readonly MainViewModel viewModel = new MainViewModel();
         private readonly UserSettingsStore settingsStore = new UserSettingsStore();
         private readonly SklandApiClient apiClient = new SklandApiClient();
+        private readonly ClipboardTextService clipboardTextService = new ClipboardTextService();
         private readonly GameWindowLocator gameWindowLocator = new GameWindowLocator();
         private readonly GlobalHotkeyService hotkeyService = new GlobalHotkeyService();
         private readonly DispatcherTimer followTimer = new DispatcherTimer();
@@ -26,6 +27,8 @@ namespace endfield_player_position_display
         private bool capturingHotkey;
         private bool coordinateWindowFollowMode;
         private bool isClosing;
+        private bool isConnecting;
+        private int monitorRunId;
 
         public MainWindow()
         {
@@ -44,8 +47,7 @@ namespace endfield_player_position_display
             UpdateMainUi();
             RegisterHotkey();
             ApplyCoordinateWindowState();
-            monitorService = new PositionMonitorService(AppDomain.CurrentDomain.BaseDirectory, ApplyUpdate);
-            await Task.Run(() => monitorService.StartAsync());
+            await StartMonitorAsync();
         }
 
         private void MainWindowClosed(object sender, EventArgs e)
@@ -75,8 +77,18 @@ namespace endfield_player_position_display
             Dispatcher.Invoke(() =>
             {
                 viewModel.ApplyMonitorUpdate(update);
+                if (update.IsError || update.SessionState != null || update.Position != null)
+                {
+                    isConnecting = false;
+                }
+
                 UpdateMainUi();
             });
+        }
+
+        private async void ReconnectButtonClick(object sender, RoutedEventArgs e)
+        {
+            await StartMonitorAsync();
         }
 
         private void CoordinateWindowChecked(object sender, RoutedEventArgs e)
@@ -212,7 +224,7 @@ namespace endfield_player_position_display
         {
             if (viewModel.ZiplineResult != null && viewModel.ZiplineResult.Found)
             {
-                Clipboard.SetText(viewModel.ZiplineResult.ToTupleText());
+                CopyText(viewModel.ZiplineResult.ToTupleText());
             }
         }
 
@@ -220,8 +232,23 @@ namespace endfield_player_position_display
         {
             if (viewModel.ZiplineResult != null && viewModel.ZiplineResult.Found)
             {
-                Clipboard.SetText(viewModel.ZiplineResult.ToJsonText());
+                CopyText(viewModel.ZiplineResult.ToJsonText());
             }
+        }
+
+        private void CopyText(string text)
+        {
+            string error;
+            if (clipboardTextService.TrySetText(text, out error))
+            {
+                viewModel.WarningText = "已复制到剪贴板";
+            }
+            else
+            {
+                viewModel.WarningText = error;
+            }
+
+            UpdateMainUi();
         }
 
         private void ToggleCoordinateWindow()
@@ -382,6 +409,38 @@ namespace endfield_player_position_display
             settingsStore.Save(viewModel.ToSettings());
         }
 
+        private async Task StartMonitorAsync()
+        {
+            if (isConnecting)
+            {
+                return;
+            }
+
+            isConnecting = true;
+            int runId = ++monitorRunId;
+            viewModel.StatusText = "正在连接...";
+            viewModel.WarningText = string.Empty;
+            viewModel.CurrentPosition = null;
+            viewModel.Credential = null;
+            viewModel.RoleBinding = null;
+            viewModel.MapId = null;
+            UpdateMainUi();
+
+            if (monitorService != null)
+            {
+                monitorService.Dispose();
+                monitorService = null;
+            }
+
+            monitorService = new PositionMonitorService(AppDomain.CurrentDomain.BaseDirectory, ApplyUpdate);
+            await Task.Run(() => monitorService.StartAsync());
+            if (runId == monitorRunId)
+            {
+                isConnecting = false;
+                UpdateMainUi();
+            }
+        }
+
         private void UpdateMainUi()
         {
             suppressControlEvents = true;
@@ -389,6 +448,7 @@ namespace endfield_player_position_display
             FollowGameCheckBox.IsChecked = viewModel.FollowGameWindow;
             HotkeyText.Text = viewModel.Hotkey.ToString();
             CaptureHotkeyButton.Content = capturingHotkey ? "按一个键..." : "设置快捷键";
+            ReconnectButton.IsEnabled = !isConnecting;
             SelectFollowPosition(viewModel.FollowPosition);
             suppressControlEvents = false;
 
