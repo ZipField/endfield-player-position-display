@@ -3,43 +3,117 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:endfield_player_position_display"
         mc:Ignorable="d"
-        Title="Endfield Position"
-        Width="150"
-        MinWidth="150"
-        SizeToContent="Height"
-        ResizeMode="NoResize"
-        Topmost="True"
+        Title="终末地坐标工具"
+        Width="430"
+        Height="520"
+        MinWidth="400"
+        MinHeight="480"
+        ResizeMode="CanMinimize"
         WindowStartupLocation="CenterScreen"
-        Background="#202124">
-    <Border Padding="10" Background="#202124">
-        <Grid>
-            <TextBlock x:Name="StatusText"
-                       Foreground="#E8EAED"
-                       FontSize="12"
-                       Text="正在连接..."
-                       TextWrapping="Wrap"
-                       TextTrimming="CharacterEllipsis" />
+        Background="#F7F9FC">
+    <Grid Margin="18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
 
-            <Grid x:Name="PositionPanel" Visibility="Collapsed">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="20" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="18" />
-                    <RowDefinition Height="18" />
-                    <RowDefinition Height="18" />
-                </Grid.RowDefinitions>
+        <TextBlock Text="终末地坐标工具"
+                   FontSize="20"
+                   FontWeight="SemiBold"
+                   Foreground="#1F2328"
+                   Margin="0,0,0,16" />
 
-                <TextBlock Grid.Row="0" Grid.Column="0" Foreground="#9AA0A6" FontSize="12" Text="X" />
-                <TextBlock x:Name="XText" Grid.Row="0" Grid.Column="1" Foreground="#FFFFFF" FontFamily="Consolas" FontSize="12" Text="-" TextAlignment="Right" />
-                <TextBlock Grid.Row="1" Grid.Column="0" Foreground="#9AA0A6" FontSize="12" Text="Y" />
-                <TextBlock x:Name="YText" Grid.Row="1" Grid.Column="1" Foreground="#FFFFFF" FontFamily="Consolas" FontSize="12" Text="-" TextAlignment="Right" />
-                <TextBlock Grid.Row="2" Grid.Column="0" Foreground="#9AA0A6" FontSize="12" Text="Z" />
-                <TextBlock x:Name="ZText" Grid.Row="2" Grid.Column="1" Foreground="#FFFFFF" FontFamily="Consolas" FontSize="12" Text="-" TextAlignment="Right" />
-            </Grid>
-        </Grid>
-    </Border>
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <GroupBox Header="坐标显示" Padding="12" Margin="0,0,0,12">
+                    <StackPanel>
+                        <CheckBox x:Name="CoordinateWindowCheckBox"
+                                  Content="显示坐标窗口"
+                                  Margin="0,0,0,10"
+                                  Checked="CoordinateWindowChecked"
+                                  Unchecked="CoordinateWindowUnchecked" />
+
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <TextBlock Text="快捷键：" VerticalAlignment="Center" Foreground="#3C4043" />
+                            <TextBlock x:Name="HotkeyText"
+                                       Width="64"
+                                       Margin="8,0,8,0"
+                                       VerticalAlignment="Center"
+                                       FontFamily="Consolas"
+                                       Foreground="#1F2328" />
+                            <Button x:Name="CaptureHotkeyButton"
+                                    Content="设置快捷键"
+                                    MinWidth="90"
+                                    Click="CaptureHotkeyButtonClick" />
+                        </StackPanel>
+
+                        <CheckBox x:Name="FollowGameCheckBox"
+                                  Content="跟随游戏窗口"
+                                  Margin="0,0,0,10"
+                                  Checked="FollowGameChanged"
+                                  Unchecked="FollowGameChanged" />
+
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="显示位置：" VerticalAlignment="Center" Foreground="#3C4043" />
+                            <ComboBox x:Name="FollowPositionComboBox"
+                                      Width="120"
+                                      Margin="8,0,0,0"
+                                      SelectionChanged="FollowPositionChanged">
+                                <ComboBoxItem Content="正上" />
+                                <ComboBoxItem Content="正左" />
+                                <ComboBoxItem Content="正下" />
+                                <ComboBoxItem Content="右下" />
+                                <ComboBoxItem Content="左下" />
+                            </ComboBox>
+                        </StackPanel>
+                    </StackPanel>
+                </GroupBox>
+
+                <GroupBox Header="状态" Padding="12" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock x:Name="StatusText"
+                                   TextWrapping="Wrap"
+                                   Foreground="#1F2328"
+                                   Margin="0,0,0,8" />
+                        <TextBlock x:Name="PositionText"
+                                   TextWrapping="Wrap"
+                                   FontFamily="Consolas"
+                                   Foreground="#3C4043"
+                                   Margin="0,0,0,8" />
+                        <TextBlock x:Name="WarningText"
+                                   TextWrapping="Wrap"
+                                   Foreground="#B3261E" />
+                    </StackPanel>
+                </GroupBox>
+
+                <GroupBox Header="滑索坐标" Padding="12">
+                    <StackPanel>
+                        <Button x:Name="LookupZiplineButton"
+                                Content="获取滑索坐标"
+                                Height="30"
+                                HorizontalAlignment="Left"
+                                MinWidth="120"
+                                Click="LookupZiplineButtonClick"
+                                Margin="0,0,0,10" />
+                        <TextBlock x:Name="ZiplineResultText"
+                                   TextWrapping="Wrap"
+                                   Foreground="#1F2328"
+                                   Margin="0,0,0,10" />
+                        <StackPanel Orientation="Horizontal">
+                            <Button x:Name="CopyTupleButton"
+                                    Content="复制 (x,y,z,方向)"
+                                    MinWidth="130"
+                                    Click="CopyTupleButtonClick"
+                                    Margin="0,0,8,0" />
+                            <Button x:Name="CopyJsonButton"
+                                    Content="复制 JSON"
+                                    MinWidth="90"
+                                    Click="CopyJsonButtonClick" />
+                        </StackPanel>
+                    </StackPanel>
+                </GroupBox>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
 </Window>
