@@ -73,12 +73,15 @@
     <Compile Include="Models\MonitorSessionState.cs" />
     <Compile Include="Models\PositionSnapshot.cs" />
     <Compile Include="Models\RoleBinding.cs" />
+    <Compile Include="Models\ZiplineLookupResult.cs" />
+    <Compile Include="Models\ZiplineMark.cs" />
     <Compile Include="Services\CoordinateFormatter.cs" />
     <Compile Include="Services\PositionMonitorService.cs" />
     <Compile Include="Services\PositionWebSocketClient.cs" />
     <Compile Include="Services\SklandApiClient.cs" />
     <Compile Include="Services\SklandSigner.cs" />
     <Compile Include="Services\TokenFileReader.cs" />
+    <Compile Include="Services\ZiplineMatcher.cs" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs">

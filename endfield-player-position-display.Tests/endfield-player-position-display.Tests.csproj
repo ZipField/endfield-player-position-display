@@ -46,6 +46,7 @@
     <Compile Include="SklandApiParsingTests.cs" />
     <Compile Include="CoordinateFormatterTests.cs" />
     <Compile Include="PositionWebSocketMessageTests.cs" />
+    <Compile Include="ZiplineMatcherTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\endfield-player-position-display.csproj">

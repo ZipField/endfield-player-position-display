@@ -24,7 +24,14 @@ namespace endfield_player_position_display.Tests
                 PositionWebSocketMessageTests.ParseMessageExtractsRemoteCloseMessageFromType6,
                 PositionWebSocketMessageTests.ParseMessageExtractsMapIdFromType1012,
                 PositionWebSocketMessageTests.ParseMessageAllowsMissingMapId,
-                PositionWebSocketMessageTests.ParseMessageUsesChineseErrorForInvalidPayload
+                PositionWebSocketMessageTests.ParseMessageUsesChineseErrorForInvalidPayload,
+                ZiplineMatcherTests.FindNearestMatchesBottomLeftAsNorth,
+                ZiplineMatcherTests.FindNearestMatchesBottomRightAsWest,
+                ZiplineMatcherTests.FindNearestMatchesTopRightAsSouth,
+                ZiplineMatcherTests.FindNearestMatchesTopLeftAsEast,
+                ZiplineMatcherTests.FindNearestReturnsNoMatchBeyondThreeMeters,
+                ZiplineMatcherTests.FindNearestChoosesClosestCandidate,
+                ZiplineMatcherTests.FormatsCopyValues
             };
 
             int passed = 0;
