@@ -357,6 +357,7 @@ namespace endfield_player_position_display
             }
 
             gameRect = ConvertGameRectToDips(gameRect);
+            coordinateWindow.Topmost = gameWindowLocator.IsEndfieldForeground();
             viewModel.WarningText = string.Empty;
             double margin = 8;
             double left = gameRect.Left;

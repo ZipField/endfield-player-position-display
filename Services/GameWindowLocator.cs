@@ -7,6 +7,27 @@ namespace endfield_player_position_display.Services
 {
     public sealed class GameWindowLocator
     {
+        public bool IsEndfieldForeground()
+        {
+            IntPtr foregroundWindow = GetForegroundWindow();
+            if (foregroundWindow == IntPtr.Zero)
+            {
+                return false;
+            }
+
+            int foregroundProcessId;
+            GetWindowThreadProcessId(foregroundWindow, out foregroundProcessId);
+            foreach (Process process in Process.GetProcessesByName("endfield"))
+            {
+                if (process.Id == foregroundProcessId)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public bool TryGetEndfieldWindowRect(out Rect rect)
         {
             rect = Rect.Empty;
@@ -53,6 +74,12 @@ namespace endfield_player_position_display.Services
 
         [DllImport("user32.dll")]
         private static extern bool ClientToScreen(IntPtr hwnd, ref NativePoint point);
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetForegroundWindow();
+
+        [DllImport("user32.dll")]
+        private static extern int GetWindowThreadProcessId(IntPtr hwnd, out int processId);
 
         [StructLayout(LayoutKind.Sequential)]
         private struct NativeRect
