@@ -16,8 +16,14 @@ namespace endfield_player_position_display.Services
         private const string CredUrl = "https://zonai.skland.com/web/v1/user/auth/generate_cred_by_code";
         private const string BindingPath = "/api/v1/game/player/binding";
         private const string WebSocketTokenPath = "/api/v1/websocket/token";
+        private const string MarkListPath = "/web/v1/game/endfield/map/mark/list";
         private const string ZonaiBaseUrl = "https://zonai.skland.com";
         internal const int SignedRequestTimestampOffsetSeconds = -3;
+        private static readonly HashSet<string> ZiplineTemplateIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "0f45150a59b97bd0de9a4eed7a0fbf23",
+            "5d53bdb714ba42c1e1a1b748b55b686f"
+        };
 
         private readonly HttpClient httpClient;
         private readonly bool ownsClient;
@@ -95,6 +101,23 @@ namespace endfield_player_position_display.Services
             return ParseWebSocketToken(json);
         }
 
+        public async Task<IList<ZiplineMark>> GetZiplineMarksAsync(
+            CredentialResult credential,
+            string mapId,
+            RoleBinding roleBinding,
+            CancellationToken cancellationToken)
+        {
+            string query = "mapId=" + Uri.EscapeDataString(mapId)
+                + "&roleId=" + Uri.EscapeDataString(roleBinding.RoleId)
+                + "&serverId=" + Uri.EscapeDataString(roleBinding.ServerId);
+            string json = await GetSignedAsync(
+                ZonaiBaseUrl + MarkListPath + "?" + query,
+                MarkListPath,
+                credential,
+                cancellationToken).ConfigureAwait(false);
+            return ParseZiplineMarks(json);
+        }
+
         public static RoleBinding ParseRoleBinding(string json)
         {
             try
@@ -168,6 +191,39 @@ namespace endfield_player_position_display.Services
             }
 
             throw new InvalidOperationException("获取 WebSocket token 失败");
+        }
+
+        public static IList<ZiplineMark> ParseZiplineMarks(string json)
+        {
+            try
+            {
+                var serializer = new JavaScriptSerializer();
+                IDictionary<string, object> root = serializer.DeserializeObject(json) as IDictionary<string, object>;
+                EnsureCodeOk(root, "获取滑索标记失败");
+                IDictionary<string, object> data = GetObject(root, "data");
+                var result = new List<ZiplineMark>();
+                foreach (object markObject in GetArray(data, "saveMarks"))
+                {
+                    var mark = markObject as IDictionary<string, object>;
+                    if (mark == null || !ZiplineTemplateIds.Contains(GetString(mark, "templateId") ?? string.Empty))
+                    {
+                        continue;
+                    }
+
+                    IDictionary<string, object> pos = GetObject(mark, "pos");
+                    result.Add(new ZiplineMark(GetDouble(pos, "x"), GetDouble(pos, "y"), GetDouble(pos, "z")));
+                }
+
+                return result;
+            }
+            catch (InvalidOperationException)
+            {
+                throw;
+            }
+            catch
+            {
+                throw new InvalidOperationException("获取滑索标记失败");
+            }
         }
 
         public void Dispose()
@@ -261,6 +317,16 @@ namespace endfield_player_position_display.Services
             }
 
             return Convert.ToInt32(obj[key]);
+        }
+
+        private static double GetDouble(IDictionary<string, object> obj, string key)
+        {
+            if (obj == null || !obj.ContainsKey(key) || obj[key] == null)
+            {
+                throw new InvalidOperationException("获取滑索标记失败");
+            }
+
+            return Convert.ToDouble(obj[key]);
         }
 
         private static string GetString(IDictionary<string, object> obj, string key)

@@ -19,6 +19,8 @@ namespace endfield_player_position_display.Tests
                 SklandApiParsingTests.ParseRoleBindingExtractsFirstEndfieldDefaultRole,
                 SklandApiParsingTests.ParseRoleBindingThrowsChineseErrorWhenRoleMissing,
                 SklandApiParsingTests.ParseWebSocketTokenExtractsDataToken,
+                SklandApiParsingTests.ParseZiplineMarksFiltersSupportedTemplates,
+                SklandApiParsingTests.ParseZiplineMarksThrowsChineseErrorForBadResponse,
                 CoordinateFormatterTests.FormatPadsIntegerPartAndKeepsFiveFractionDigits,
                 PositionWebSocketMessageTests.ParseMessageExtractsPositionFromType1012,
                 PositionWebSocketMessageTests.ParseMessageExtractsRemoteCloseMessageFromType6,
