@@ -35,7 +35,8 @@ namespace endfield_player_position_display.Tests
                 ZiplineMatcherTests.FindNearestChoosesClosestCandidate,
                 ZiplineMatcherTests.FormatsCopyValues,
                 ClipboardTextServiceTests.TrySetTextRetriesWhenClipboardIsBusy,
-                ClipboardTextServiceTests.TrySetTextReturnsErrorWhenClipboardStaysBusy
+                ClipboardTextServiceTests.TrySetTextReturnsErrorWhenClipboardStaysBusy,
+                DpiCoordinateConverterTests.FromDevicePixelsConvertsRectToDips
             };
 
             int passed = 0;

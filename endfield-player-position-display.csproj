@@ -85,6 +85,7 @@
     <Compile Include="Models\ZiplineMark.cs" />
     <Compile Include="Services\ClipboardTextService.cs" />
     <Compile Include="Services\CoordinateFormatter.cs" />
+    <Compile Include="Services\DpiCoordinateConverter.cs" />
     <Compile Include="Services\GameWindowLocator.cs" />
     <Compile Include="Services\GlobalHotkeyService.cs" />
     <Compile Include="Services\PositionMonitorService.cs" />

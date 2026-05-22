@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Media;
 using System.Windows.Threading;
 using endfield_player_position_display.Models;
 using endfield_player_position_display.Services;
@@ -355,6 +356,7 @@ namespace endfield_player_position_display
                 return;
             }
 
+            gameRect = ConvertGameRectToDips(gameRect);
             viewModel.WarningText = string.Empty;
             double margin = 8;
             double left = gameRect.Left;
@@ -390,6 +392,18 @@ namespace endfield_player_position_display
             coordinateWindow.Left = left;
             coordinateWindow.Top = top;
             UpdateMainUi();
+        }
+
+        private Rect ConvertGameRectToDips(Rect gameRect)
+        {
+            PresentationSource source = PresentationSource.FromVisual(this);
+            if (source == null || source.CompositionTarget == null)
+            {
+                return gameRect;
+            }
+
+            Matrix transform = source.CompositionTarget.TransformFromDevice;
+            return DpiCoordinateConverter.FromDevicePixels(gameRect, transform);
         }
 
         private void RegisterHotkey()
