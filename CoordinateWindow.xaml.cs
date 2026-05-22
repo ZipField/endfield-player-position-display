@@ -34,6 +34,7 @@ namespace endfield_player_position_display
                 Background = Brushes.Transparent;
                 RootBorder.Background = Brushes.Transparent;
                 RootBorder.Padding = new Thickness(4);
+                ApplyFontScale(1.2);
             }
             else
             {
@@ -42,6 +43,20 @@ namespace endfield_player_position_display
                 Background = new SolidColorBrush(Color.FromRgb(32, 33, 36));
                 RootBorder.Background = Background;
                 RootBorder.Padding = new Thickness(10);
+                ApplyFontScale(1.0);
+            }
+        }
+
+        private void ApplyFontScale(double scale)
+        {
+            StatusText.FontSize = 12 * scale;
+            foreach (UIElement child in PositionPanel.Children)
+            {
+                var textBlock = child as System.Windows.Controls.TextBlock;
+                if (textBlock != null)
+                {
+                    textBlock.FontSize = 12 * scale;
+                }
             }
         }
 

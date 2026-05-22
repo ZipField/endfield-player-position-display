@@ -339,12 +339,12 @@ namespace endfield_player_position_display
             switch (viewModel.FollowPosition)
             {
                 case "正左":
-                    left = gameRect.Left - width - margin;
+                    left = gameRect.Left + margin;
                     top = gameRect.Top + (gameRect.Height - height) / 2;
                     break;
                 case "正下":
                     left = gameRect.Left + (gameRect.Width - width) / 2;
-                    top = gameRect.Bottom + margin;
+                    top = gameRect.Bottom - height - margin;
                     break;
                 case "右下":
                     left = gameRect.Right - width - margin;
@@ -352,11 +352,11 @@ namespace endfield_player_position_display
                     break;
                 case "左下":
                     left = gameRect.Left + margin;
-                    top = gameRect.Bottom - height - margin;
+                    top = gameRect.Bottom - height - margin - 30;
                     break;
                 default:
                     left = gameRect.Left + (gameRect.Width - width) / 2;
-                    top = gameRect.Top - height - margin;
+                    top = gameRect.Top + margin;
                     break;
             }
 
