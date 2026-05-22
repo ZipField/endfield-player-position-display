@@ -9,7 +9,7 @@ namespace endfield_player_position_display.Tests
             string headerJson = SklandSigner.CreateHeaderJson("1779204182");
 
             TestAssert.AreEqual(
-                "{\"platform\":\"\",\"timestamp\":\"1779204182\",\"dId\":\"\",\"vName\":\"\"}",
+                "{\"platform\":\"3\",\"timestamp\":\"1779204182\",\"dId\":\"\",\"vName\":\"1.0.0\"}",
                 headerJson);
         }
 

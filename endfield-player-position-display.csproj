@@ -70,6 +70,7 @@
     </Compile>
     <Compile Include="Models\CredentialResult.cs" />
     <Compile Include="Models\MonitorUpdate.cs" />
+    <Compile Include="Models\MonitorSessionState.cs" />
     <Compile Include="Models\PositionSnapshot.cs" />
     <Compile Include="Models\RoleBinding.cs" />
     <Compile Include="Services\CoordinateFormatter.cs" />

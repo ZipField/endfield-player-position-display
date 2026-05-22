@@ -64,11 +64,24 @@ namespace endfield_player_position_display.Services
                 CredentialResult credential = await apiClient.GenerateCredentialAsync(code, cancellationToken).ConfigureAwait(false);
                 RoleBinding roleBinding = await apiClient.GetRoleBindingAsync(credential, cancellationToken).ConfigureAwait(false);
                 string webSocketToken = await apiClient.GetWebSocketTokenAsync(credential, cancellationToken).ConfigureAwait(false);
+                onUpdate(MonitorUpdate.SessionReady(credential, roleBinding));
+
+                string latestMapId = null;
 
                 await webSocketClient.RunAsync(
                     webSocketToken,
                     roleBinding,
-                    position => onUpdate(MonitorUpdate.FromPosition(position)),
+                    (position, mapId) =>
+                    {
+                        if (!string.IsNullOrWhiteSpace(mapId))
+                        {
+                            latestMapId = mapId;
+                        }
+
+                        onUpdate(MonitorUpdate.FromPosition(
+                            position,
+                            new MonitorSessionState(credential, roleBinding, latestMapId)));
+                    },
                     error => onUpdate(MonitorUpdate.Error(error)),
                     cancellationToken).ConfigureAwait(false);
             }

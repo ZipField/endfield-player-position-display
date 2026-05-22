@@ -22,6 +22,8 @@ namespace endfield_player_position_display.Tests
                 CoordinateFormatterTests.FormatPadsIntegerPartAndKeepsFiveFractionDigits,
                 PositionWebSocketMessageTests.ParseMessageExtractsPositionFromType1012,
                 PositionWebSocketMessageTests.ParseMessageExtractsRemoteCloseMessageFromType6,
+                PositionWebSocketMessageTests.ParseMessageExtractsMapIdFromType1012,
+                PositionWebSocketMessageTests.ParseMessageAllowsMissingMapId,
                 PositionWebSocketMessageTests.ParseMessageUsesChineseErrorForInvalidPayload
             };
 

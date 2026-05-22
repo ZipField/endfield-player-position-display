@@ -21,40 +21,47 @@ namespace endfield_player_position_display.Services
 
     public sealed class PositionWebSocketMessage
     {
-        private PositionWebSocketMessage(PositionWebSocketMessageKind kind, PositionSnapshot position, string errorMessage)
+        private PositionWebSocketMessage(PositionWebSocketMessageKind kind, PositionSnapshot position, string errorMessage, string mapId)
         {
             Kind = kind;
             Position = position;
             ErrorMessage = errorMessage;
+            MapId = mapId;
         }
 
         public PositionWebSocketMessageKind Kind { get; }
         public PositionSnapshot Position { get; }
         public string ErrorMessage { get; }
+        public string MapId { get; }
 
         public static PositionWebSocketMessage Unknown()
         {
-            return new PositionWebSocketMessage(PositionWebSocketMessageKind.Unknown, null, null);
+            return new PositionWebSocketMessage(PositionWebSocketMessageKind.Unknown, null, null, null);
         }
 
         public static PositionWebSocketMessage Authenticated()
         {
-            return new PositionWebSocketMessage(PositionWebSocketMessageKind.Authenticated, null, null);
+            return new PositionWebSocketMessage(PositionWebSocketMessageKind.Authenticated, null, null, null);
         }
 
         public static PositionWebSocketMessage HeartbeatAck()
         {
-            return new PositionWebSocketMessage(PositionWebSocketMessageKind.HeartbeatAck, null, null);
+            return new PositionWebSocketMessage(PositionWebSocketMessageKind.HeartbeatAck, null, null, null);
         }
 
         public static PositionWebSocketMessage FromPosition(PositionSnapshot position)
         {
-            return new PositionWebSocketMessage(PositionWebSocketMessageKind.Position, position, null);
+            return FromPosition(position, null);
+        }
+
+        public static PositionWebSocketMessage FromPosition(PositionSnapshot position, string mapId)
+        {
+            return new PositionWebSocketMessage(PositionWebSocketMessageKind.Position, position, null, mapId);
         }
 
         public static PositionWebSocketMessage RemoteClose(string message)
         {
-            return new PositionWebSocketMessage(PositionWebSocketMessageKind.RemoteClose, null, message);
+            return new PositionWebSocketMessage(PositionWebSocketMessageKind.RemoteClose, null, message, null);
         }
     }
 
@@ -67,7 +74,7 @@ namespace endfield_player_position_display.Services
         public async Task RunAsync(
             string websocketToken,
             RoleBinding roleBinding,
-            Action<PositionSnapshot> onPosition,
+            Action<PositionSnapshot, string> onPosition,
             Action<string> onError,
             CancellationToken cancellationToken)
         {
@@ -96,7 +103,7 @@ namespace endfield_player_position_display.Services
                         }
                         else if (message.Kind == PositionWebSocketMessageKind.Position)
                         {
-                            onPosition(message.Position);
+                            onPosition(message.Position, message.MapId);
                             if (heartbeatTask == null)
                             {
                                 heartbeatCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -158,10 +165,12 @@ namespace endfield_player_position_display.Services
                 {
                     var data = GetObject(root, "data");
                     var pos = GetObject(data, "pos");
-                    return PositionWebSocketMessage.FromPosition(new PositionSnapshot(
-                        GetDouble(pos, "x"),
-                        GetDouble(pos, "y"),
-                        GetDouble(pos, "z")));
+                    return PositionWebSocketMessage.FromPosition(
+                        new PositionSnapshot(
+                            GetDouble(pos, "x"),
+                            GetDouble(pos, "y"),
+                            GetDouble(pos, "z")),
+                        GetString(data, "mapId"));
                 }
 
                 if (type == 6)
