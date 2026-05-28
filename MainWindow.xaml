@@ -6,7 +6,7 @@
         mc:Ignorable="d"
         Title="终末地坐标工具"
         Width="430"
-        Height="570"
+        Height="690"
         MinWidth="400"
         MinHeight="480"
         ResizeMode="CanMinimize"
@@ -54,24 +54,89 @@
                                   Checked="FollowGameChanged"
                                   Unchecked="FollowGameChanged" />
 
-                        <StackPanel Orientation="Horizontal">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                             <TextBlock Text="显示位置：" VerticalAlignment="Center" Foreground="#3C4043" />
                             <ComboBox x:Name="FollowPositionComboBox"
                                       Width="120"
                                       Margin="8,0,0,0"
                                       SelectionChanged="FollowPositionChanged">
                                 <ComboBoxItem Content="正上" />
-                                <ComboBoxItem Content="正左" />
-                                <ComboBoxItem Content="正下" />
+                                <ComboBoxItem Content="右上" />
+                                <ComboBoxItem Content="正右" />
                                 <ComboBoxItem Content="右下" />
+                                <ComboBoxItem Content="正下" />
                                 <ComboBoxItem Content="左下" />
+                                <ComboBoxItem Content="正左" />
+                                <ComboBoxItem Content="左上" />
                             </ComboBox>
                         </StackPanel>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="70" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="44" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0"
+                                       Text="左右偏移"
+                                       VerticalAlignment="Center"
+                                       Foreground="#3C4043" />
+                            <Slider x:Name="FollowHorizontalOffsetSlider"
+                                    Grid.Row="0"
+                                    Grid.Column="1"
+                                    Minimum="0"
+                                    Maximum="500"
+                                    TickFrequency="10"
+                                    ValueChanged="FollowOffsetChanged" />
+                            <TextBlock x:Name="FollowHorizontalOffsetText"
+                                       Grid.Row="0"
+                                       Grid.Column="2"
+                                       TextAlignment="Right"
+                                       VerticalAlignment="Center"
+                                       Foreground="#3C4043" />
+
+                            <TextBlock Grid.Row="1" Grid.Column="0"
+                                       Text="上下偏移"
+                                       VerticalAlignment="Center"
+                                       Foreground="#3C4043" />
+                            <Slider x:Name="FollowVerticalOffsetSlider"
+                                    Grid.Row="1"
+                                    Grid.Column="1"
+                                    Minimum="0"
+                                    Maximum="500"
+                                    TickFrequency="10"
+                                    ValueChanged="FollowOffsetChanged" />
+                            <TextBlock x:Name="FollowVerticalOffsetText"
+                                       Grid.Row="1"
+                                       Grid.Column="2"
+                                       TextAlignment="Right"
+                                       VerticalAlignment="Center"
+                                       Foreground="#3C4043" />
+                        </Grid>
                     </StackPanel>
                 </GroupBox>
 
                 <GroupBox Header="状态" Padding="12" Margin="0,0,0,12">
                     <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <TextBlock Text="角色："
+                                       VerticalAlignment="Center"
+                                       Foreground="#3C4043" />
+                            <ComboBox x:Name="RoleComboBox"
+                                      Width="210"
+                                      Margin="8,0,8,0"
+                                      DisplayMemberPath="DisplayName"
+                                      SelectionChanged="RoleComboBoxSelectionChanged" />
+                            <Button x:Name="SwitchRoleButton"
+                                    Content="切换"
+                                    MinWidth="58"
+                                    Click="SwitchRoleButtonClick" />
+                        </StackPanel>
                         <Button x:Name="ReconnectButton"
                                 Content="重新连接"
                                 Height="30"
@@ -94,30 +159,68 @@
                     </StackPanel>
                 </GroupBox>
 
-                <GroupBox Header="滑索坐标" Padding="12">
+                <GroupBox Header="数据采集" Padding="12" Margin="0,0,0,12">
                     <StackPanel>
-                        <Button x:Name="LookupZiplineButton"
-                                Content="获取滑索坐标"
-                                Height="30"
-                                HorizontalAlignment="Left"
-                                MinWidth="120"
-                                Click="LookupZiplineButtonClick"
-                                Margin="0,0,0,10" />
-                        <TextBlock x:Name="ZiplineResultText"
+                        <CheckBox x:Name="RecordCaptureDataCheckBox"
+                                  Content="记录采集数据到文件"
+                                  Margin="0,0,0,10"
+                                  Checked="RecordCaptureDataChanged"
+                                  Unchecked="RecordCaptureDataChanged" />
+
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <Button x:Name="StartCaptureButton"
+                                    Content="开始采集"
+                                    Height="30"
+                                    MinWidth="86"
+                                    Click="StartCaptureButtonClick"
+                                    Margin="0,0,8,0" />
+                            <Button x:Name="StopCaptureButton"
+                                    Content="停止采集"
+                                    Height="30"
+                                    MinWidth="86"
+                                    Click="StopCaptureButtonClick"
+                                    Margin="0,0,8,0" />
+                            <Button x:Name="ManualDetectZiplineButton"
+                                    Content="手动获取当前滑索"
+                                    Height="30"
+                                    MinWidth="130"
+                                    Click="ManualDetectZiplineButtonClick" />
+                        </StackPanel>
+
+                        <TextBlock x:Name="CaptureStatusText"
+                                   TextWrapping="Wrap"
+                                   Margin="0,0,0,8"
+                                   Foreground="#3C4043" />
+                        <TextBlock x:Name="ManualZiplineResultText"
                                    TextWrapping="Wrap"
                                    Foreground="#1F2328"
-                                   Margin="0,0,0,10" />
-                        <StackPanel Orientation="Horizontal">
-                            <Button x:Name="CopyTupleButton"
-                                    Content="复制 (x,y,z,方向)"
-                                    MinWidth="130"
+                                   Margin="0,0,0,8" />
+                        <TextBlock x:Name="RealtimeDetectionText"
+                                   TextWrapping="Wrap"
+                                   Foreground="#1F2328"
+                                   Margin="0,0,0,8" />
+                        <WrapPanel>
+                            <Button x:Name="CopyCaptureTextButton"
+                                    Content="复制滑索 JSON"
+                                    MinWidth="110"
+                                    Click="CopyCaptureTextButtonClick"
+                                    Margin="0,0,8,8" />
+                            <Button x:Name="CopyCaptureJsonButton"
+                                    Content="复制路线集合"
+                                    MinWidth="110"
+                                    Click="CopyCaptureJsonButtonClick"
+                                    Margin="0,0,8,8" />
+                            <Button x:Name="CopyManualTupleButton"
+                                    Content="复制当前坐标"
+                                    MinWidth="110"
                                     Click="CopyTupleButtonClick"
-                                    Margin="0,0,8,0" />
-                            <Button x:Name="CopyJsonButton"
-                                    Content="复制 JSON"
-                                    MinWidth="90"
-                                    Click="CopyJsonButtonClick" />
-                        </StackPanel>
+                                    Margin="0,0,8,8" />
+                            <Button x:Name="CopyManualJsonButton"
+                                    Content="复制当前 JSON"
+                                    MinWidth="105"
+                                    Click="CopyJsonButtonClick"
+                                    Margin="0,0,0,8" />
+                        </WrapPanel>
                     </StackPanel>
                 </GroupBox>
             </StackPanel>

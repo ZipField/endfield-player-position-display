@@ -25,6 +25,15 @@ namespace endfield_player_position_display.Models
             return new MonitorUpdate(null, "已连接", false, new MonitorSessionState(credential, roleBinding, null));
         }
 
+        public static MonitorUpdate SessionReady(RoleSession activeRole, System.Collections.Generic.IReadOnlyList<RoleSession> availableRoles)
+        {
+            return new MonitorUpdate(
+                null,
+                activeRole == null ? "已连接" : "已连接：" + activeRole.DisplayName,
+                false,
+                new MonitorSessionState(activeRole.Credential, activeRole.RoleBinding, null, availableRoles, activeRole));
+        }
+
         public static MonitorUpdate FromPosition(PositionSnapshot position)
         {
             return new MonitorUpdate(position, null, false, null);

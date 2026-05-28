@@ -68,6 +68,7 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="DetectionToastWindow.cs" />
     <Compile Include="MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
@@ -77,19 +78,32 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Models\CredentialResult.cs" />
+    <Compile Include="Models\DetectedZiplineStop.cs" />
     <Compile Include="Models\MonitorUpdate.cs" />
     <Compile Include="Models\MonitorSessionState.cs" />
     <Compile Include="Models\PositionSnapshot.cs" />
     <Compile Include="Models\RoleBinding.cs" />
+    <Compile Include="Models\RoleSession.cs" />
     <Compile Include="Models\ZiplineLookupResult.cs" />
     <Compile Include="Models\ZiplineMark.cs" />
+    <Compile Include="Models\ZiplineMotionAnalysisResult.cs" />
+    <Compile Include="Models\ZiplineMotionPoint.cs" />
+    <Compile Include="Models\ZiplineMotionSample.cs" />
+    <Compile Include="Models\ZiplineMotionSegment.cs" />
+    <Compile Include="Models\ZiplineRealtimeDetection.cs" />
     <Compile Include="Services\ClipboardTextService.cs" />
     <Compile Include="Services\CoordinateFormatter.cs" />
     <Compile Include="Services\DpiCoordinateConverter.cs" />
+    <Compile Include="Services\FollowWindowPlacement.cs" />
     <Compile Include="Services\GameWindowLocator.cs" />
     <Compile Include="Services\GlobalHotkeyService.cs" />
+    <Compile Include="Services\NetworkTimeService.cs" />
     <Compile Include="Services\PositionMonitorService.cs" />
     <Compile Include="Services\PositionWebSocketClient.cs" />
+    <Compile Include="Services\PositionCaptureRecorder.cs" />
+    <Compile Include="Services\ZiplineCollectionExporter.cs" />
+    <Compile Include="Services\ZiplineRealtimeDetector.cs" />
+    <Compile Include="Services\ZiplineMotionAnalyzer.cs" />
     <Compile Include="Services\SklandApiClient.cs" />
     <Compile Include="Services\SklandSigner.cs" />
     <Compile Include="Services\TokenFileReader.cs" />

@@ -16,6 +16,31 @@ namespace endfield_player_position_display.Tests
             TestAssert.AreEqual("abc123", token);
         }
 
+        public static void ReadTokensKeepsDuplicatesWhenRequested()
+        {
+            string dir = CreateTempDirectory();
+            File.WriteAllText(Path.Combine(dir, "token.txt"), " abc123 \r\nabc123\r\n def456 \r\n");
+
+            var tokens = TokenFileReader.ReadTokens(dir, false);
+
+            TestAssert.AreEqual(3, tokens.Count);
+            TestAssert.AreEqual("abc123", tokens[0]);
+            TestAssert.AreEqual("abc123", tokens[1]);
+            TestAssert.AreEqual("def456", tokens[2]);
+        }
+
+        public static void ReadTokensRemovesDuplicatesWhenRequested()
+        {
+            string dir = CreateTempDirectory();
+            File.WriteAllText(Path.Combine(dir, "token.txt"), " abc123 \r\nabc123\r\n def456 \r\n");
+
+            var tokens = TokenFileReader.ReadTokens(dir, true);
+
+            TestAssert.AreEqual(2, tokens.Count);
+            TestAssert.AreEqual("abc123", tokens[0]);
+            TestAssert.AreEqual("def456", tokens[1]);
+        }
+
         public static void ReadTokenThrowsChineseErrorWhenFileMissing()
         {
             string dir = CreateTempDirectory();

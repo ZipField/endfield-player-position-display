@@ -14,6 +14,15 @@ namespace endfield_player_position_display.Tests
             TestAssert.AreEqual("1779204179", timestamp);
         }
 
+        public static void CreateSignedRequestTimestampAppliesNetworkTimeOffset()
+        {
+            var localNow = DateTimeOffset.FromUnixTimeSeconds(1779204182);
+
+            string timestamp = SklandApiClient.CreateSignedRequestTimestamp(localNow, TimeSpan.FromSeconds(10));
+
+            TestAssert.AreEqual("1779204189", timestamp);
+        }
+
         public static void ParseRoleBindingExtractsFirstEndfieldDefaultRole()
         {
             string json = "{\"code\":0,\"message\":\"OK\",\"data\":{\"list\":[{\"appCode\":\"other\",\"bindingList\":[]},{\"appCode\":\"endfield\",\"bindingList\":[{\"defaultRole\":{\"serverId\":\"1\",\"roleId\":\"1538309069\"}}]}]}}";
@@ -22,6 +31,21 @@ namespace endfield_player_position_display.Tests
 
             TestAssert.AreEqual("1", binding.ServerId);
             TestAssert.AreEqual("1538309069", binding.RoleId);
+        }
+
+        public static void ParseRoleBindingsExtractsNicknameAndChannelName()
+        {
+            string json = "{\"code\":0,\"message\":\"OK\",\"data\":{\"list\":[{\"appCode\":\"endfield\",\"channelName\":\"应用频道\",\"bindingList\":[{\"channelName\":\"森空岛\",\"defaultRole\":{\"serverId\":\"1\",\"roleId\":\"1538309069\",\"nickname\":\"角色A\"}},{\"defaultRole\":{\"serverId\":\"2\",\"roleId\":\"42\",\"nickName\":\"角色B\"}}]}]}}";
+
+            var bindings = SklandApiClient.ParseRoleBindings(json);
+
+            TestAssert.AreEqual(2, bindings.Count);
+            TestAssert.AreEqual("1538309069", bindings[0].RoleId);
+            TestAssert.AreEqual("角色A", bindings[0].Nickname);
+            TestAssert.AreEqual("森空岛", bindings[0].ChannelName);
+            TestAssert.AreEqual("42", bindings[1].RoleId);
+            TestAssert.AreEqual("角色B", bindings[1].Nickname);
+            TestAssert.AreEqual("应用频道", bindings[1].ChannelName);
         }
 
         public static void ParseRoleBindingThrowsChineseErrorWhenRoleMissing()

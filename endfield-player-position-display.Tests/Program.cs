@@ -10,13 +10,18 @@ namespace endfield_player_position_display.Tests
             var tests = new List<Action>
             {
                 TokenFileReaderTests.ReadTokenReadsTrimmedTokenFromBaseDirectory,
+                TokenFileReaderTests.ReadTokensKeepsDuplicatesWhenRequested,
+                TokenFileReaderTests.ReadTokensRemovesDuplicatesWhenRequested,
                 TokenFileReaderTests.ReadTokenThrowsChineseErrorWhenFileMissing,
                 TokenFileReaderTests.ReadTokenThrowsChineseErrorWhenFileBlank,
                 SklandSignerTests.CreateHeaderJsonUsesAcceptedClientHeaderValues,
                 SklandSignerTests.CreateSignReturnsMd5OfHmacSha256Hex,
                 SklandSignerTests.CreateSignIncludesQueryOrBodySegment,
                 SklandApiParsingTests.CreateSignedRequestTimestampUsesServerAcceptedClockSkew,
+                SklandApiParsingTests.CreateSignedRequestTimestampAppliesNetworkTimeOffset,
+                NetworkTimeServiceTests.CalculateOffsetUsesNetworkDateMinusLocalDate,
                 SklandApiParsingTests.ParseRoleBindingExtractsFirstEndfieldDefaultRole,
+                SklandApiParsingTests.ParseRoleBindingsExtractsNicknameAndChannelName,
                 SklandApiParsingTests.ParseRoleBindingThrowsChineseErrorWhenRoleMissing,
                 SklandApiParsingTests.ParseWebSocketTokenExtractsDataToken,
                 SklandApiParsingTests.ParseZiplineMarksFiltersSupportedTemplates,
@@ -36,7 +41,24 @@ namespace endfield_player_position_display.Tests
                 ZiplineMatcherTests.FormatsCopyValues,
                 ClipboardTextServiceTests.TrySetTextRetriesWhenClipboardIsBusy,
                 ClipboardTextServiceTests.TrySetTextReturnsErrorWhenClipboardStaysBusy,
-                DpiCoordinateConverterTests.FromDevicePixelsConvertsRectToDips
+                DpiCoordinateConverterTests.FromDevicePixelsConvertsRectToDips,
+                FollowWindowPlacementTests.CalculatePlacesAllEightDirections,
+                FollowWindowPlacementTests.CalculateAppliesDirectionalOffsetsTowardInside,
+                FollowWindowPlacementTests.CalculateAllowsNegativeCenterAxisOffsets,
+                PositionCaptureRecorderTests.RecorderWritesUtf8BomCsvWithMovementMetrics,
+                ZiplineMotionAnalyzerTests.AnalyzeDetectsStopPointsAndTurnIntersections,
+                ZiplineMotionAnalyzerTests.AnalyzeInfersZiplineRangeWithoutManualStartOrEnd,
+                ZiplineMotionAnalyzerTests.AnalyzeRealCaptureFindsTenZiplinePoints,
+                ZiplineMotionAnalyzerTests.AnalyzeNewRealCapturesUsesExpectedPointCounts,
+                ZiplineCollectionExporterTests.ExportMarksJsonUsesNewFormatWithBidirectionalConnections,
+                ZiplineCollectionExporterTests.ExportRoutesJsonGroupsConnectedMarks,
+                ZiplineCollectionExporterTests.ExportRoutesJsonSplitsWhenStopDoesNotConnectToPrevious,
+                ZiplineRealtimeDetectorTests.DetectorConfirmsStablePositionNearMarkWithHeightOffset,
+                ZiplineRealtimeDetectorTests.DetectorRejectsGroundPositionNearMarkWithWrongHeight,
+                ZiplineRealtimeDetectorTests.DetectorDoesNotRepeatUntilLeavingPreviousMark,
+                ZiplineRealtimeDetectorTests.DetectorReplaysLatestCaptureAndFindsFourStops,
+                ZiplineRealtimeDetectorTests.DetectorReplaysCaptureWithFastConfirm,
+                ZiplineRealtimeDetectorTests.DetectorReplaysCapture164946AndSplitsGroundTransition
             };
 
             int passed = 0;

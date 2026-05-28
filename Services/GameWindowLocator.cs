@@ -28,6 +28,19 @@ namespace endfield_player_position_display.Services
             return false;
         }
 
+        public bool IsCurrentProcessForeground()
+        {
+            IntPtr foregroundWindow = GetForegroundWindow();
+            if (foregroundWindow == IntPtr.Zero)
+            {
+                return false;
+            }
+
+            int foregroundProcessId;
+            GetWindowThreadProcessId(foregroundWindow, out foregroundProcessId);
+            return foregroundProcessId == Process.GetCurrentProcess().Id;
+        }
+
         public bool TryGetEndfieldWindowRect(out Rect rect)
         {
             rect = Rect.Empty;

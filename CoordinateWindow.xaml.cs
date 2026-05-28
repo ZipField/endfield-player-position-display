@@ -27,7 +27,9 @@ namespace endfield_player_position_display
 
         private void ApplyWindowStyle()
         {
-            Topmost = true;
+            ShowInTaskbar = false;
+            ShowActivated = false;
+            Topmost = !followMode;
             if (followMode)
             {
                 WindowStyle = WindowStyle.None;

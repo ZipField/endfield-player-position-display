@@ -50,6 +50,12 @@
     <Compile Include="ZiplineMatcherTests.cs" />
     <Compile Include="ClipboardTextServiceTests.cs" />
     <Compile Include="DpiCoordinateConverterTests.cs" />
+    <Compile Include="FollowWindowPlacementTests.cs" />
+    <Compile Include="NetworkTimeServiceTests.cs" />
+    <Compile Include="PositionCaptureRecorderTests.cs" />
+    <Compile Include="ZiplineMotionAnalyzerTests.cs" />
+    <Compile Include="ZiplineCollectionExporterTests.cs" />
+    <Compile Include="ZiplineRealtimeDetectorTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\endfield-player-position-display.csproj">

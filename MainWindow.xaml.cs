@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Threading.Tasks;
 using System.Windows;
@@ -21,14 +22,21 @@ namespace endfield_player_position_display
         private readonly ClipboardTextService clipboardTextService = new ClipboardTextService();
         private readonly GameWindowLocator gameWindowLocator = new GameWindowLocator();
         private readonly GlobalHotkeyService hotkeyService = new GlobalHotkeyService();
+        private readonly PositionCaptureRecorder captureRecorder = new PositionCaptureRecorder(AppDomain.CurrentDomain.BaseDirectory);
         private readonly DispatcherTimer followTimer = new DispatcherTimer();
+        private readonly List<ZiplineMark> captureMarks = new List<ZiplineMark>();
         private PositionMonitorService monitorService;
         private CoordinateWindow coordinateWindow;
+        private DetectionToastWindow detectionToastWindow;
+        private ZiplineRealtimeDetector realtimeDetector;
+        private bool isLoadingCaptureMarks;
+        private bool isCapturing;
         private bool suppressControlEvents;
         private bool capturingHotkey;
         private bool coordinateWindowFollowMode;
         private bool isClosing;
         private bool isConnecting;
+        private DateTimeOffset? gameNotForegroundSince;
         private int monitorRunId;
 
         public MainWindow()
@@ -64,6 +72,12 @@ namespace endfield_player_position_display
                 coordinateWindow = null;
             }
 
+            if (detectionToastWindow != null)
+            {
+                detectionToastWindow.Close();
+                detectionToastWindow = null;
+            }
+
             if (monitorService != null)
             {
                 monitorService.Dispose();
@@ -71,6 +85,7 @@ namespace endfield_player_position_display
             }
 
             apiClient.Dispose();
+            captureRecorder.Dispose();
         }
 
         private void ApplyUpdate(MonitorUpdate update)
@@ -78,6 +93,16 @@ namespace endfield_player_position_display
             Dispatcher.Invoke(() =>
             {
                 viewModel.ApplyMonitorUpdate(update);
+                if (update.Position != null)
+                {
+                    if (captureRecorder.IsRecording)
+                    {
+                        captureRecorder.Record(update.Position, DateTimeOffset.UtcNow);
+                    }
+
+                    UpdateRealtimeDetection(update.Position);
+                }
+
                 if (update.IsError || update.SessionState != null || update.Position != null)
                 {
                     isConnecting = false;
@@ -89,6 +114,31 @@ namespace endfield_player_position_display
 
         private async void ReconnectButtonClick(object sender, RoutedEventArgs e)
         {
+            await StartMonitorAsync();
+        }
+
+        private void RoleComboBoxSelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (suppressControlEvents)
+            {
+                return;
+            }
+
+            RoleSession role = RoleComboBox.SelectedItem as RoleSession;
+            if (role != null)
+            {
+                viewModel.SelectedRoleKey = role.Key;
+            }
+        }
+
+        private async void SwitchRoleButtonClick(object sender, RoutedEventArgs e)
+        {
+            RoleSession role = RoleComboBox.SelectedItem as RoleSession;
+            if (role != null)
+            {
+                viewModel.SelectedRoleKey = role.Key;
+            }
+
             await StartMonitorAsync();
         }
 
@@ -138,8 +188,25 @@ namespace endfield_player_position_display
             }
 
             viewModel.FollowPosition = GetSelectedFollowPosition();
+            UpdateOffsetControls();
             UpdateFollowPosition();
             SaveSettings();
+        }
+
+        private void FollowOffsetChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (suppressControlEvents)
+            {
+                return;
+            }
+
+            viewModel.SetFollowOffset(
+                viewModel.FollowPosition,
+                FollowHorizontalOffsetSlider.Value,
+                FollowVerticalOffsetSlider.Value);
+            UpdateFollowPosition();
+            SaveSettings();
+            UpdateOffsetText();
         }
 
         private void CaptureHotkeyButtonClick(object sender, RoutedEventArgs e)
@@ -173,51 +240,76 @@ namespace endfield_player_position_display
 
         private async void LookupZiplineButtonClick(object sender, RoutedEventArgs e)
         {
+            await ManualDetectZiplineAsync(false);
+        }
+
+        private async void ManualDetectZiplineButtonClick(object sender, RoutedEventArgs e)
+        {
+            await ManualDetectZiplineAsync(true);
+        }
+
+        private async Task ManualDetectZiplineAsync(bool addToCapture)
+        {
             if (viewModel.CurrentPosition == null)
             {
                 viewModel.ZiplineResult = ZiplineLookupResult.NotFound();
-                ZiplineResultText.Text = "缺少当前位置，连接成功并获取坐标后再试";
+                ManualZiplineResultText.Text = "缺少当前位置，连接成功并获取坐标后再试";
                 UpdateCopyButtons();
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(viewModel.MapId))
             {
-                ZiplineResultText.Text = "缺少当前地图 ID，等待坐标同步后再试";
+                ManualZiplineResultText.Text = "缺少当前地图 ID，等待坐标同步后再试";
                 UpdateCopyButtons();
                 return;
             }
 
             if (viewModel.Credential == null || viewModel.RoleBinding == null)
             {
-                ZiplineResultText.Text = "缺少登录或角色信息，连接成功后再试";
+                ManualZiplineResultText.Text = "缺少登录或角色信息，连接成功后再试";
                 UpdateCopyButtons();
                 return;
             }
 
-            LookupZiplineButton.IsEnabled = false;
-            ZiplineResultText.Text = "正在获取滑索坐标...";
+            ManualDetectZiplineButton.IsEnabled = false;
+            ManualZiplineResultText.Text = "正在获取滑索坐标...";
             try
             {
-                var marks = await apiClient.GetZiplineMarksAsync(
-                    viewModel.Credential,
-                    viewModel.MapId,
-                    viewModel.RoleBinding,
-                    System.Threading.CancellationToken.None);
-                viewModel.ZiplineResult = ZiplineMatcher.FindNearest(viewModel.CurrentPosition, marks);
-                ZiplineResultText.Text = viewModel.ZiplineResult.Found
+                await EnsureCaptureMarksAsync();
+                viewModel.ZiplineResult = ZiplineMatcher.FindNearest(viewModel.CurrentPosition, captureMarks);
+                ManualZiplineResultText.Text = viewModel.ZiplineResult.Found
                     ? viewModel.ZiplineResult.ToTupleText()
                     : viewModel.ZiplineResult.Message;
+                if (viewModel.ZiplineResult.Found && addToCapture)
+                {
+                    if (realtimeDetector == null)
+                    {
+                        realtimeDetector = new ZiplineRealtimeDetector(captureMarks);
+                    }
+
+                    ZiplineRealtimeDetection detection = realtimeDetector.AddManual(viewModel.CurrentPosition);
+                    if (detection.Detected)
+                    {
+                        if (captureRecorder.IsRecording)
+                        {
+                            captureRecorder.WriteDetection(detection.Stop, DateTimeOffset.UtcNow);
+                        }
+
+                        ShowDetectionToast(detection.Stop);
+                    }
+                }
             }
             catch (Exception ex)
             {
-                ZiplineResultText.Text = ex is InvalidOperationException ? ex.Message : "获取滑索坐标失败";
+                ManualZiplineResultText.Text = ex is InvalidOperationException ? ex.Message : "获取滑索坐标失败";
                 viewModel.ZiplineResult = null;
             }
             finally
             {
-                LookupZiplineButton.IsEnabled = true;
+                ManualDetectZiplineButton.IsEnabled = true;
                 UpdateCopyButtons();
+                UpdateMainUi();
             }
         }
 
@@ -237,6 +329,18 @@ namespace endfield_player_position_display
             }
         }
 
+        private void RecordCaptureDataChanged(object sender, RoutedEventArgs e)
+        {
+            if (suppressControlEvents)
+            {
+                return;
+            }
+
+            viewModel.RecordCaptureData = RecordCaptureDataCheckBox.IsChecked == true;
+            SaveSettings();
+            UpdateMainUi();
+        }
+
         private void CopyText(string text)
         {
             string error;
@@ -250,6 +354,216 @@ namespace endfield_player_position_display
             }
 
             UpdateMainUi();
+        }
+
+        private async void StartCaptureButtonClick(object sender, RoutedEventArgs e)
+        {
+            if (realtimeDetector != null && realtimeDetector.DetectedStops.Count > 0)
+            {
+                MessageBoxResult result = MessageBox.Show(
+                    this,
+                    "开始新的采集会清除当前已识别的滑索数据，是否继续？",
+                    "确认开始采集",
+                    MessageBoxButton.OKCancel,
+                    MessageBoxImage.Warning);
+                if (result != MessageBoxResult.OK)
+                {
+                    return;
+                }
+            }
+
+            isCapturing = true;
+            if (viewModel.RecordCaptureData)
+            {
+                captureRecorder.Start(DateTimeOffset.Now);
+            }
+            else
+            {
+                captureRecorder.Stop();
+            }
+
+            captureMarks.Clear();
+            realtimeDetector = null;
+            isLoadingCaptureMarks = false;
+            viewModel.ZiplineResult = null;
+            ManualZiplineResultText.Text = string.Empty;
+            RealtimeDetectionText.Text = string.Empty;
+            viewModel.WarningText = "已开始采集，正在获取当前地图滑索数据...";
+            UpdateMainUi();
+            await LoadCaptureMarksAsync();
+        }
+
+        private void StopCaptureButtonClick(object sender, RoutedEventArgs e)
+        {
+            isCapturing = false;
+            captureRecorder.Stop();
+            viewModel.WarningText = "已停止采集";
+            UpdateMainUi();
+        }
+
+        private async Task LoadCaptureMarksAsync()
+        {
+            if (!isCapturing)
+            {
+                return;
+            }
+
+            if (isLoadingCaptureMarks)
+            {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(viewModel.MapId) || viewModel.Credential == null || viewModel.RoleBinding == null)
+            {
+                viewModel.WarningText = "已开始采集；等待地图、登录和角色信息后再获取滑索数据";
+                UpdateMainUi();
+                return;
+            }
+
+            isLoadingCaptureMarks = true;
+            try
+            {
+                IList<ZiplineMark> marks = await apiClient.GetZiplineMarksAsync(
+                    viewModel.Credential,
+                    viewModel.MapId,
+                    viewModel.RoleBinding,
+                    System.Threading.CancellationToken.None);
+                captureMarks.Clear();
+                captureMarks.AddRange(marks);
+                if (captureRecorder.IsRecording)
+                {
+                    captureRecorder.WriteMarks(captureMarks);
+                }
+
+                realtimeDetector = new ZiplineRealtimeDetector(captureMarks);
+                viewModel.WarningText = "已获取滑索数据：" + captureMarks.Count + " 个，停在滑索上等待识别";
+            }
+            catch (Exception ex)
+            {
+                viewModel.WarningText = ex is InvalidOperationException ? ex.Message : "获取采集用滑索数据失败";
+            }
+            finally
+            {
+                isLoadingCaptureMarks = false;
+            }
+
+            UpdateMainUi();
+        }
+
+        private async Task EnsureCaptureMarksAsync()
+        {
+            if (captureMarks.Count > 0)
+            {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(viewModel.MapId) || viewModel.Credential == null || viewModel.RoleBinding == null)
+            {
+                throw new InvalidOperationException("缺少地图、登录或角色信息");
+            }
+
+            IList<ZiplineMark> marks = await apiClient.GetZiplineMarksAsync(
+                viewModel.Credential,
+                viewModel.MapId,
+                viewModel.RoleBinding,
+                System.Threading.CancellationToken.None);
+            captureMarks.Clear();
+            captureMarks.AddRange(marks);
+            if (captureRecorder.IsRecording)
+            {
+                captureRecorder.WriteMarks(captureMarks);
+            }
+        }
+
+        private async void UpdateRealtimeDetection(PositionSnapshot position)
+        {
+            if (!isCapturing)
+            {
+                return;
+            }
+
+            if (realtimeDetector == null)
+            {
+                if (captureMarks.Count == 0 && !string.IsNullOrWhiteSpace(viewModel.MapId) && viewModel.Credential != null && viewModel.RoleBinding != null)
+                {
+                    await LoadCaptureMarksAsync();
+                }
+
+                return;
+            }
+
+            ZiplineRealtimeDetection detection = realtimeDetector.Update(position);
+            if (!detection.Detected)
+            {
+                return;
+            }
+
+            if (captureRecorder.IsRecording)
+            {
+                captureRecorder.WriteDetection(detection.Stop, DateTimeOffset.UtcNow);
+            }
+
+            viewModel.WarningText = string.Format(
+                CultureInfo.InvariantCulture,
+                "已识别第 {0} 个滑索：({1},{2},{3},{4})",
+                detection.Stop.Order,
+                detection.Stop.X,
+                detection.Stop.Y,
+                detection.Stop.Z,
+                detection.Stop.Direction);
+            ShowDetectionToast(detection.Stop);
+            UpdateMainUi();
+        }
+
+        private void CopyCaptureTextButtonClick(object sender, RoutedEventArgs e)
+        {
+            if (realtimeDetector != null)
+            {
+                CopyText(realtimeDetector.GetResultJson());
+            }
+        }
+
+        private void CopyCaptureJsonButtonClick(object sender, RoutedEventArgs e)
+        {
+            if (realtimeDetector != null)
+            {
+                CopyText(realtimeDetector.GetRouteCollectionJson());
+            }
+        }
+
+        private void ShowDetectionToast(DetectedZiplineStop stop)
+        {
+            if (stop == null)
+            {
+                return;
+            }
+
+            if (detectionToastWindow == null)
+            {
+                detectionToastWindow = new DetectionToastWindow();
+            }
+
+            Rect targetRect;
+            if (!gameWindowLocator.TryGetEndfieldWindowRect(out targetRect))
+            {
+                targetRect = SystemParameters.WorkArea;
+            }
+            else
+            {
+                targetRect = ConvertGameRectToDips(targetRect);
+            }
+
+            detectionToastWindow.UpdateLayout();
+            double left = targetRect.Right - detectionToastWindow.Width - 18;
+            double top = targetRect.Bottom - detectionToastWindow.Height - 18;
+            string message = string.Format(
+                CultureInfo.InvariantCulture,
+                "已识别滑索 ({0},{1},{2},{3})",
+                stop.X,
+                stop.Y,
+                stop.Z,
+                stop.Direction);
+            detectionToastWindow.ShowMessage(message, left, top);
         }
 
         private void ToggleCoordinateWindow()
@@ -352,46 +666,67 @@ namespace endfield_player_position_display
             if (!gameWindowLocator.TryGetEndfieldWindowRect(out gameRect))
             {
                 viewModel.WarningText = "未找到 endfield.exe 游戏窗口";
+                coordinateWindow.Topmost = false;
+                if (!coordinateWindow.IsVisible)
+                {
+                    coordinateWindow.Show();
+                }
+
+                gameNotForegroundSince = null;
                 UpdateMainUi();
                 return;
             }
 
             gameRect = ConvertGameRectToDips(gameRect);
-            coordinateWindow.Topmost = gameWindowLocator.IsEndfieldForeground();
+            bool gameForeground = gameWindowLocator.IsEndfieldForeground();
+            bool appForeground = IsActive || IsKeyboardFocusWithin || gameWindowLocator.IsCurrentProcessForeground();
+            coordinateWindow.Topmost = gameForeground;
+            if (gameForeground)
+            {
+                gameNotForegroundSince = null;
+                if (!coordinateWindow.IsVisible)
+                {
+                    coordinateWindow.Show();
+                }
+            }
+            else if (appForeground)
+            {
+                gameNotForegroundSince = null;
+                coordinateWindow.Topmost = false;
+                if (!coordinateWindow.IsVisible)
+                {
+                    coordinateWindow.Show();
+                }
+            }
+            else
+            {
+                if (!gameNotForegroundSince.HasValue)
+                {
+                    gameNotForegroundSince = DateTimeOffset.UtcNow;
+                }
+
+                if ((DateTimeOffset.UtcNow - gameNotForegroundSince.Value).TotalSeconds >= 1)
+                {
+                    coordinateWindow.Hide();
+                    UpdateMainUi();
+                    return;
+                }
+            }
+
             viewModel.WarningText = string.Empty;
-            double margin = 8;
-            double left = gameRect.Left;
-            double top = gameRect.Top;
             coordinateWindow.UpdateLayout();
             double width = coordinateWindow.ActualWidth > 0 ? coordinateWindow.ActualWidth : coordinateWindow.Width;
             double height = coordinateWindow.ActualHeight > 0 ? coordinateWindow.ActualHeight : 70;
+            FollowOffsetSettings offset = viewModel.GetFollowOffset(viewModel.FollowPosition);
+            Point point = FollowWindowPlacement.Calculate(
+                gameRect,
+                new Size(width, height),
+                viewModel.FollowPosition,
+                offset.Horizontal,
+                offset.Vertical);
 
-            switch (viewModel.FollowPosition)
-            {
-                case "正左":
-                    left = gameRect.Left + margin;
-                    top = gameRect.Top + (gameRect.Height - height) / 2;
-                    break;
-                case "正下":
-                    left = gameRect.Left + (gameRect.Width - width) / 2;
-                    top = gameRect.Bottom - height - margin;
-                    break;
-                case "右下":
-                    left = gameRect.Right - width - margin;
-                    top = gameRect.Bottom - height - margin;
-                    break;
-                case "左下":
-                    left = gameRect.Left + margin;
-                    top = gameRect.Bottom - height - margin - 30;
-                    break;
-                default:
-                    left = gameRect.Left + (gameRect.Width - width) / 2;
-                    top = gameRect.Top + margin;
-                    break;
-            }
-
-            coordinateWindow.Left = left;
-            coordinateWindow.Top = top;
+            coordinateWindow.Left = point.X;
+            coordinateWindow.Top = point.Y;
             UpdateMainUi();
         }
 
@@ -447,7 +782,7 @@ namespace endfield_player_position_display
                 monitorService = null;
             }
 
-            monitorService = new PositionMonitorService(AppDomain.CurrentDomain.BaseDirectory, ApplyUpdate);
+            monitorService = new PositionMonitorService(AppDomain.CurrentDomain.BaseDirectory, ApplyUpdate, viewModel.SelectedRoleKey);
             await Task.Run(() => monitorService.StartAsync());
             if (runId == monitorRunId)
             {
@@ -461,10 +796,21 @@ namespace endfield_player_position_display
             suppressControlEvents = true;
             CoordinateWindowCheckBox.IsChecked = viewModel.IsCoordinateWindowOpen;
             FollowGameCheckBox.IsChecked = viewModel.FollowGameWindow;
+            RecordCaptureDataCheckBox.IsChecked = viewModel.RecordCaptureData;
             HotkeyText.Text = viewModel.Hotkey.ToString();
             CaptureHotkeyButton.Content = capturingHotkey ? "按一个键..." : "设置快捷键";
             ReconnectButton.IsEnabled = !isConnecting;
+            RoleComboBox.ItemsSource = viewModel.AvailableRoles;
+            SelectRole(viewModel.SelectedRoleKey);
+            SwitchRoleButton.IsEnabled = !isConnecting && RoleComboBox.SelectedItem != null;
+            StartCaptureButton.IsEnabled = !isCapturing;
+            StopCaptureButton.IsEnabled = isCapturing;
+            ManualDetectZiplineButton.IsEnabled = viewModel.CurrentPosition != null && !isLoadingCaptureMarks;
+            bool hasRealtimeResult = realtimeDetector != null && realtimeDetector.DetectedStops.Count > 0;
+            CopyCaptureTextButton.IsEnabled = hasRealtimeResult;
+            CopyCaptureJsonButton.IsEnabled = hasRealtimeResult;
             SelectFollowPosition(viewModel.FollowPosition);
+            UpdateOffsetControls();
             suppressControlEvents = false;
 
             StatusText.Text = string.IsNullOrWhiteSpace(viewModel.StatusText) ? "正在连接..." : viewModel.StatusText;
@@ -483,27 +829,42 @@ namespace endfield_player_position_display
                     CoordinateFormatter.Format(viewModel.CurrentPosition.Z));
             }
 
-            if (viewModel.ZiplineResult == null)
-            {
-                ZiplineResultText.Text = string.Empty;
-            }
-            else if (viewModel.ZiplineResult.Found)
-            {
-                ZiplineResultText.Text = viewModel.ZiplineResult.ToTupleText();
-            }
-            else
-            {
-                ZiplineResultText.Text = viewModel.ZiplineResult.Message;
-            }
+            ManualZiplineResultText.Text = viewModel.ZiplineResult == null
+                ? ManualZiplineResultText.Text
+                : viewModel.ZiplineResult.Found ? viewModel.ZiplineResult.ToTupleText() : viewModel.ZiplineResult.Message;
 
             UpdateCopyButtons();
+            UpdateCaptureStatusText();
+        }
+
+        private void UpdateCaptureStatusText()
+        {
+            if (isCapturing)
+            {
+                CaptureStatusText.Text = string.Format(
+                    CultureInfo.InvariantCulture,
+                    viewModel.RecordCaptureData
+                        ? "采集中：样本 {0}，目录 {1}。停在滑索上等待识别，也可以手动获取当前滑索。"
+                        : "采集中：未记录文件。停在滑索上等待识别，也可以手动获取当前滑索。",
+                    captureRecorder.SampleCount,
+                    captureRecorder.CurrentSessionDirectory);
+                RealtimeDetectionText.Text = realtimeDetector == null
+                    ? "实时识别：等待滑索数据"
+                    : "实时识别：" + realtimeDetector.DetectedStops.Count + " 个" + Environment.NewLine + realtimeDetector.GetResultText();
+                return;
+            }
+
+            CaptureStatusText.Text = viewModel.RecordCaptureData
+                ? "未采集。开始采集后会记录 positions、marks、detections 文件。"
+                : "未采集。当前不会记录文件，只保留本次识别结果用于复制。";
+            RealtimeDetectionText.Text = realtimeDetector == null ? string.Empty : realtimeDetector.GetResultText();
         }
 
         private void UpdateCopyButtons()
         {
             bool canCopy = viewModel.ZiplineResult != null && viewModel.ZiplineResult.Found;
-            CopyTupleButton.IsEnabled = canCopy;
-            CopyJsonButton.IsEnabled = canCopy;
+            CopyManualTupleButton.IsEnabled = canCopy;
+            CopyManualJsonButton.IsEnabled = canCopy;
         }
 
         private string GetSelectedFollowPosition()
@@ -526,6 +887,63 @@ namespace endfield_player_position_display
             }
 
             FollowPositionComboBox.SelectedIndex = 0;
+        }
+
+        private void UpdateOffsetControls()
+        {
+            FollowOffsetSettings offset = viewModel.GetFollowOffset(viewModel.FollowPosition);
+            UpdateOffsetRanges(viewModel.FollowPosition);
+            FollowHorizontalOffsetSlider.Value = offset.Horizontal;
+            FollowVerticalOffsetSlider.Value = offset.Vertical;
+            UpdateOffsetText();
+        }
+
+        private void UpdateOffsetRanges(string position)
+        {
+            const double maxOffset = 500;
+            bool horizontalCanBeNegative = string.Equals(position, "正上", StringComparison.Ordinal)
+                || string.Equals(position, "正下", StringComparison.Ordinal);
+            bool verticalCanBeNegative = string.Equals(position, "正左", StringComparison.Ordinal)
+                || string.Equals(position, "正右", StringComparison.Ordinal);
+
+            FollowHorizontalOffsetSlider.Minimum = horizontalCanBeNegative ? -maxOffset : 0;
+            FollowHorizontalOffsetSlider.Maximum = maxOffset;
+            FollowVerticalOffsetSlider.Minimum = verticalCanBeNegative ? -maxOffset : 0;
+            FollowVerticalOffsetSlider.Maximum = maxOffset;
+        }
+
+        private void UpdateOffsetText()
+        {
+            if (FollowHorizontalOffsetText == null || FollowVerticalOffsetText == null)
+            {
+                return;
+            }
+
+            FollowHorizontalOffsetText.Text = Math.Round(FollowHorizontalOffsetSlider.Value).ToString(CultureInfo.InvariantCulture);
+            FollowVerticalOffsetText.Text = Math.Round(FollowVerticalOffsetSlider.Value).ToString(CultureInfo.InvariantCulture);
+        }
+
+        private void SelectRole(string key)
+        {
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                if (RoleComboBox.Items.Count > 0 && RoleComboBox.SelectedIndex < 0)
+                {
+                    RoleComboBox.SelectedIndex = 0;
+                }
+
+                return;
+            }
+
+            foreach (object item in RoleComboBox.Items)
+            {
+                RoleSession role = item as RoleSession;
+                if (role != null && string.Equals(role.Key, key, StringComparison.Ordinal))
+                {
+                    RoleComboBox.SelectedItem = role;
+                    return;
+                }
+            }
         }
     }
 }

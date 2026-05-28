@@ -28,6 +28,7 @@ namespace endfield_player_position_display.Services
         private readonly HttpClient httpClient;
         private readonly bool ownsClient;
         private readonly JavaScriptSerializer serializer = new JavaScriptSerializer();
+        private TimeSpan networkTimeOffset = TimeSpan.Zero;
 
         public SklandApiClient()
             : this(new HttpClient(), true)
@@ -38,6 +39,12 @@ namespace endfield_player_position_display.Services
         {
             this.httpClient = httpClient;
             this.ownsClient = ownsClient;
+        }
+
+        public TimeSpan NetworkTimeOffset
+        {
+            get { return networkTimeOffset; }
+            set { networkTimeOffset = value; }
         }
 
         public async Task<string> GrantAsync(string token, CancellationToken cancellationToken)
@@ -95,6 +102,12 @@ namespace endfield_player_position_display.Services
             return ParseRoleBinding(json);
         }
 
+        public async Task<IList<RoleBinding>> GetRoleBindingsAsync(CredentialResult credential, CancellationToken cancellationToken)
+        {
+            string json = await GetSignedAsync(ZonaiBaseUrl + BindingPath, BindingPath, credential, cancellationToken).ConfigureAwait(false);
+            return ParseRoleBindings(json);
+        }
+
         public async Task<string> GetWebSocketTokenAsync(CredentialResult credential, CancellationToken cancellationToken)
         {
             string json = await GetSignedAsync(ZonaiBaseUrl + WebSocketTokenPath, WebSocketTokenPath, credential, cancellationToken).ConfigureAwait(false);
@@ -120,6 +133,17 @@ namespace endfield_player_position_display.Services
 
         public static RoleBinding ParseRoleBinding(string json)
         {
+            IList<RoleBinding> bindings = ParseRoleBindings(json);
+            if (bindings.Count > 0)
+            {
+                return bindings[0];
+            }
+
+            throw new InvalidOperationException("未找到终末地角色");
+        }
+
+        public static IList<RoleBinding> ParseRoleBindings(string json)
+        {
             try
             {
                 var serializer = new JavaScriptSerializer();
@@ -128,6 +152,7 @@ namespace endfield_player_position_display.Services
 
                 IDictionary<string, object> data = GetObject(root, "data");
                 IEnumerable list = GetArray(data, "list");
+                var result = new List<RoleBinding>();
                 foreach (object appObject in list)
                 {
                     var app = appObject as IDictionary<string, object>;
@@ -136,6 +161,7 @@ namespace endfield_player_position_display.Services
                         continue;
                     }
 
+                    string channelName = GetString(app, "channelName");
                     IEnumerable bindingList = GetArray(app, "bindingList");
                     foreach (object bindingObject in bindingList)
                     {
@@ -148,11 +174,18 @@ namespace endfield_player_position_display.Services
                         IDictionary<string, object> defaultRole = GetObject(binding, "defaultRole");
                         string serverId = GetString(defaultRole, "serverId");
                         string roleId = GetString(defaultRole, "roleId");
+                        string nickname = GetString(defaultRole, "nickname") ?? GetString(defaultRole, "nickName");
+                        string bindingChannelName = GetString(binding, "channelName") ?? channelName;
                         if (!string.IsNullOrWhiteSpace(serverId) && !string.IsNullOrWhiteSpace(roleId))
                         {
-                            return new RoleBinding(serverId, roleId);
+                            result.Add(new RoleBinding(serverId, roleId, nickname, bindingChannelName));
                         }
                     }
+                }
+
+                if (result.Count > 0)
+                {
+                    return result;
                 }
             }
             catch (InvalidOperationException)
@@ -252,7 +285,7 @@ namespace endfield_player_position_display.Services
 
         private async Task<string> GetSignedAsync(string url, string path, CredentialResult credential, CancellationToken cancellationToken)
         {
-            string timestamp = CreateSignedRequestTimestamp(DateTimeOffset.UtcNow);
+            string timestamp = CreateSignedRequestTimestamp(DateTimeOffset.UtcNow, networkTimeOffset);
             string headerJson = SklandSigner.CreateHeaderJson(timestamp);
             string sign = SklandSigner.CreateSign(path, GetQueryForSigning(url), timestamp, headerJson, credential.Token);
 
@@ -281,7 +314,12 @@ namespace endfield_player_position_display.Services
 
         internal static string CreateSignedRequestTimestamp(DateTimeOffset now)
         {
-            return now.AddSeconds(SignedRequestTimestampOffsetSeconds).ToUnixTimeSeconds().ToString();
+            return CreateSignedRequestTimestamp(now, TimeSpan.Zero);
+        }
+
+        internal static string CreateSignedRequestTimestamp(DateTimeOffset now, TimeSpan networkTimeOffset)
+        {
+            return now.Add(networkTimeOffset).AddSeconds(SignedRequestTimestampOffsetSeconds).ToUnixTimeSeconds().ToString();
         }
 
         private IDictionary<string, object> DeserializeObject(string json)

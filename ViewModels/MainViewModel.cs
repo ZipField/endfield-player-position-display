@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
@@ -12,12 +13,16 @@ namespace endfield_player_position_display.ViewModels
         private bool isCoordinateWindowOpen;
         private bool followGameWindow;
         private string followPosition;
+        private Dictionary<string, FollowOffsetSettings> followOffsets = FollowOffsetSettings.CreateDefaults();
+        private bool recordCaptureData;
         private Key hotkey;
         private string statusText;
         private string warningText;
         private PositionSnapshot currentPosition;
         private CredentialResult credential;
         private RoleBinding roleBinding;
+        private IReadOnlyList<RoleSession> availableRoles = new List<RoleSession>();
+        private string selectedRoleKey;
         private string mapId;
         private ZiplineLookupResult ziplineResult;
         private bool isError;
@@ -40,6 +45,18 @@ namespace endfield_player_position_display.ViewModels
         {
             get { return followPosition; }
             set { Set(ref followPosition, value); }
+        }
+
+        public Dictionary<string, FollowOffsetSettings> FollowOffsets
+        {
+            get { return followOffsets; }
+            set { Set(ref followOffsets, value ?? FollowOffsetSettings.CreateDefaults()); }
+        }
+
+        public bool RecordCaptureData
+        {
+            get { return recordCaptureData; }
+            set { Set(ref recordCaptureData, value); }
         }
 
         public Key Hotkey
@@ -78,6 +95,18 @@ namespace endfield_player_position_display.ViewModels
             set { Set(ref roleBinding, value); }
         }
 
+        public IReadOnlyList<RoleSession> AvailableRoles
+        {
+            get { return availableRoles; }
+            set { Set(ref availableRoles, value ?? new List<RoleSession>()); }
+        }
+
+        public string SelectedRoleKey
+        {
+            get { return selectedRoleKey; }
+            set { Set(ref selectedRoleKey, value); }
+        }
+
         public string MapId
         {
             get { return mapId; }
@@ -102,6 +131,10 @@ namespace endfield_player_position_display.ViewModels
             IsCoordinateWindowOpen = actual.IsCoordinateWindowOpen;
             FollowGameWindow = actual.FollowGameWindow;
             FollowPosition = string.IsNullOrWhiteSpace(actual.FollowPosition) ? "正上" : actual.FollowPosition;
+            FollowOffsets = MergeOffsets(actual.FollowOffsets);
+            RecordCaptureData = actual.RecordCaptureData.HasValue
+                ? actual.RecordCaptureData.Value
+                : UserSettings.Default().RecordCaptureData.GetValueOrDefault();
             Key parsed;
             Hotkey = Enum.TryParse(actual.Hotkey, out parsed) ? parsed : Key.F12;
         }
@@ -113,8 +146,31 @@ namespace endfield_player_position_display.ViewModels
                 IsCoordinateWindowOpen = IsCoordinateWindowOpen,
                 FollowGameWindow = FollowGameWindow,
                 FollowPosition = FollowPosition,
+                FollowOffsets = FollowOffsets,
+                RecordCaptureData = RecordCaptureData,
                 Hotkey = Hotkey.ToString()
             };
+        }
+
+        public FollowOffsetSettings GetFollowOffset(string position)
+        {
+            string key = string.IsNullOrWhiteSpace(position) ? "正上" : position;
+            FollowOffsetSettings offset;
+            if (!FollowOffsets.TryGetValue(key, out offset) || offset == null)
+            {
+                offset = new FollowOffsetSettings();
+                FollowOffsets[key] = offset;
+            }
+
+            return offset;
+        }
+
+        public void SetFollowOffset(string position, double horizontal, double vertical)
+        {
+            FollowOffsetSettings offset = GetFollowOffset(position);
+            offset.Horizontal = horizontal;
+            offset.Vertical = vertical;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("FollowOffsets"));
         }
 
         public void ApplyMonitorUpdate(MonitorUpdate update)
@@ -140,6 +196,16 @@ namespace endfield_player_position_display.ViewModels
             {
                 Credential = update.SessionState.Credential ?? Credential;
                 RoleBinding = update.SessionState.RoleBinding ?? RoleBinding;
+                if (update.SessionState.AvailableRoles != null)
+                {
+                    AvailableRoles = update.SessionState.AvailableRoles;
+                }
+
+                if (update.SessionState.ActiveRole != null)
+                {
+                    SelectedRoleKey = update.SessionState.ActiveRole.Key;
+                }
+
                 if (!string.IsNullOrWhiteSpace(update.SessionState.MapId))
                 {
                     MapId = update.SessionState.MapId;
@@ -156,6 +222,25 @@ namespace endfield_player_position_display.ViewModels
 
             field = value;
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        private static Dictionary<string, FollowOffsetSettings> MergeOffsets(Dictionary<string, FollowOffsetSettings> stored)
+        {
+            Dictionary<string, FollowOffsetSettings> result = FollowOffsetSettings.CreateDefaults();
+            if (stored == null)
+            {
+                return result;
+            }
+
+            foreach (var pair in stored)
+            {
+                if (pair.Value != null)
+                {
+                    result[pair.Key] = pair.Value;
+                }
+            }
+
+            return result;
         }
     }
 }
