@@ -39,6 +39,8 @@ namespace endfield_player_position_display.Tests
                 ZiplineMatcherTests.FindNearestReturnsNoMatchBeyondThreeMeters,
                 ZiplineMatcherTests.FindNearestChoosesClosestCandidate,
                 ZiplineMatcherTests.FormatsCopyValues,
+                ClipboardTextServiceTests.TrySetTextSetsDataObjectWithoutFlushAndSchedulesFlush,
+                ClipboardTextServiceTests.TrySetTextIgnoresAsyncFlushFailure,
                 ClipboardTextServiceTests.TrySetTextRetriesWhenClipboardIsBusy,
                 ClipboardTextServiceTests.TrySetTextReturnsErrorWhenClipboardStaysBusy,
                 DpiCoordinateConverterTests.FromDevicePixelsConvertsRectToDips,

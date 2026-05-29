@@ -8,17 +8,29 @@ namespace endfield_player_position_display.Services
     public sealed class ClipboardTextService
     {
         private const int ClipboardBusyHResult = unchecked((int)0x800401D0);
-        private readonly Action<string> setText;
+        private readonly Action<string, bool> setDataObject;
+        private readonly Action flush;
+        private readonly Action<Action> runAsync;
         private readonly int delayMilliseconds;
 
         public ClipboardTextService()
-            : this(Clipboard.SetText, 40)
+            : this(
+                (text, copy) => Clipboard.SetDataObject(text, copy),
+                Clipboard.Flush,
+                StartBackgroundStaThread,
+                40)
         {
         }
 
-        internal ClipboardTextService(Action<string> setText, int delayMilliseconds)
+        internal ClipboardTextService(
+            Action<string, bool> setDataObject,
+            Action flush,
+            Action<Action> runAsync,
+            int delayMilliseconds)
         {
-            this.setText = setText;
+            this.setDataObject = setDataObject;
+            this.flush = flush;
+            this.runAsync = runAsync;
             this.delayMilliseconds = delayMilliseconds;
         }
 
@@ -29,7 +41,8 @@ namespace endfield_player_position_display.Services
             {
                 try
                 {
-                    setText(text);
+                    setDataObject(text, false);
+                    StartFlushAsync();
                     return true;
                 }
                 catch (COMException ex)
@@ -55,6 +68,37 @@ namespace endfield_player_position_display.Services
 
             error = "复制失败";
             return false;
+        }
+
+        private void StartFlushAsync()
+        {
+            try
+            {
+                runAsync(TryFlush);
+            }
+            catch
+            {
+            }
+        }
+
+        private void TryFlush()
+        {
+            try
+            {
+                flush();
+            }
+            catch
+            {
+            }
+        }
+
+        private static void StartBackgroundStaThread(Action action)
+        {
+            var thread = new Thread(() => action());
+            thread.IsBackground = true;
+            thread.Name = "Clipboard flush";
+            thread.SetApartmentState(ApartmentState.STA);
+            thread.Start();
         }
     }
 }
