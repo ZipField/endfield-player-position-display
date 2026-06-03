@@ -21,8 +21,17 @@ namespace endfield_player_position_display
             DataContext = viewModel;
             viewModel.PropertyChanged += ViewModelPropertyChanged;
             Closed += CoordinateWindowClosed;
+            SourceInitialized += CoordinateWindowSourceInitialized;
             ApplyWindowStyle();
             ApplyContent();
+        }
+
+        private void CoordinateWindowSourceInitialized(object sender, EventArgs e)
+        {
+            if (followMode)
+            {
+                WindowMousePassthrough.Enable(this);
+            }
         }
 
         private void ApplyWindowStyle()
@@ -122,6 +131,7 @@ namespace endfield_player_position_display
 
         private void CoordinateWindowClosed(object sender, EventArgs e)
         {
+            SourceInitialized -= CoordinateWindowSourceInitialized;
             viewModel.PropertyChanged -= ViewModelPropertyChanged;
         }
     }

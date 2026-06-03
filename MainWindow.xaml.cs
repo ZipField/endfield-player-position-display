@@ -56,6 +56,14 @@ namespace endfield_player_position_display
             UpdateMainUi();
             RegisterHotkey();
             ApplyCoordinateWindowState();
+            if (!EnsureTokenAvailable())
+            {
+                viewModel.StatusText = "未登录";
+                viewModel.WarningText = "登录后才能连接坐标同步";
+                UpdateMainUi();
+                return;
+            }
+
             await StartMonitorAsync();
         }
 
@@ -114,7 +122,26 @@ namespace endfield_player_position_display
 
         private async void ReconnectButtonClick(object sender, RoutedEventArgs e)
         {
+            if (!EnsureTokenAvailable())
+            {
+                viewModel.StatusText = "未登录";
+                viewModel.WarningText = "登录后才能连接坐标同步";
+                UpdateMainUi();
+                return;
+            }
+
             await StartMonitorAsync();
+        }
+
+        private async void TokenManagerButtonClick(object sender, RoutedEventArgs e)
+        {
+            var window = new TokenManagerWindow(AppDomain.CurrentDomain.BaseDirectory);
+            window.Owner = this;
+            window.ShowDialog();
+            if (window.TokensChanged)
+            {
+                await RestartAfterTokenChangeAsync();
+            }
         }
 
         private void RoleComboBoxSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -791,6 +818,48 @@ namespace endfield_player_position_display
             }
         }
 
+        private bool EnsureTokenAvailable()
+        {
+            string baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+            if (TokenFileWriter.HasAnyToken(baseDirectory))
+            {
+                return true;
+            }
+
+            var loginWindow = new LoginWindow();
+            loginWindow.Owner = this;
+            if (loginWindow.ShowDialog() == true)
+            {
+                TokenFileWriter.AppendToken(baseDirectory, loginWindow.Token);
+                return true;
+            }
+
+            return false;
+        }
+
+        private async Task RestartAfterTokenChangeAsync()
+        {
+            if (!TokenFileWriter.HasAnyToken(AppDomain.CurrentDomain.BaseDirectory))
+            {
+                if (monitorService != null)
+                {
+                    monitorService.Dispose();
+                    monitorService = null;
+                }
+
+                viewModel.StatusText = "未登录";
+                viewModel.WarningText = "没有可用 token";
+                viewModel.CurrentPosition = null;
+                viewModel.Credential = null;
+                viewModel.RoleBinding = null;
+                viewModel.AvailableRoles = new List<RoleSession>();
+                UpdateMainUi();
+                return;
+            }
+
+            await StartMonitorAsync();
+        }
+
         private void UpdateMainUi()
         {
             suppressControlEvents = true;
@@ -800,6 +869,7 @@ namespace endfield_player_position_display
             HotkeyText.Text = viewModel.Hotkey.ToString();
             CaptureHotkeyButton.Content = capturingHotkey ? "按一个键..." : "设置快捷键";
             ReconnectButton.IsEnabled = !isConnecting;
+            TokenManagerButton.IsEnabled = !isConnecting;
             RoleComboBox.ItemsSource = viewModel.AvailableRoles;
             SelectRole(viewModel.SelectedRoleKey);
             SwitchRoleButton.IsEnabled = !isConnecting && RoleComboBox.SelectedItem != null;

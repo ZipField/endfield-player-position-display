@@ -43,6 +43,7 @@
     <Compile Include="Program.cs" />
     <Compile Include="TestAssert.cs" />
     <Compile Include="TokenFileReaderTests.cs" />
+    <Compile Include="ScanLoginTests.cs" />
     <Compile Include="SklandSignerTests.cs" />
     <Compile Include="SklandApiParsingTests.cs" />
     <Compile Include="CoordinateFormatterTests.cs" />

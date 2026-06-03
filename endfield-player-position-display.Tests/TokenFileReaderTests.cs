@@ -62,6 +62,48 @@ namespace endfield_player_position_display.Tests
             TestAssert.AreEqual("token.txt 内容为空", ex.Message);
         }
 
+        public static void HasAnyTokenReturnsFalseWhenMissingOrBlank()
+        {
+            string missingDir = CreateTempDirectory();
+            string blankDir = CreateTempDirectory();
+            File.WriteAllText(Path.Combine(blankDir, "token.txt"), "   \r\n");
+
+            TestAssert.AreEqual(false, TokenFileWriter.HasAnyToken(missingDir));
+            TestAssert.AreEqual(false, TokenFileWriter.HasAnyToken(blankDir));
+        }
+
+        public static void AppendTokenAddsLineWithoutOverwritingExistingTokens()
+        {
+            string dir = CreateTempDirectory();
+            File.WriteAllText(Path.Combine(dir, "token.txt"), "first\r\n");
+
+            TokenFileWriter.AppendToken(dir, " second ");
+
+            var tokens = TokenFileReader.ReadTokens(dir, false);
+            TestAssert.AreEqual(2, tokens.Count);
+            TestAssert.AreEqual("first", tokens[0]);
+            TestAssert.AreEqual("second", tokens[1]);
+        }
+
+        public static void RemoveTokenAtRemovesOnlySelectedTokenLine()
+        {
+            string dir = CreateTempDirectory();
+            File.WriteAllText(Path.Combine(dir, "token.txt"), "first\r\nsecond\r\nthird\r\n");
+
+            TokenFileWriter.RemoveTokenAt(dir, 1);
+
+            var tokens = TokenFileReader.ReadTokens(dir, false);
+            TestAssert.AreEqual(2, tokens.Count);
+            TestAssert.AreEqual("first", tokens[0]);
+            TestAssert.AreEqual("third", tokens[1]);
+        }
+
+        public static void MaskTokenKeepsOnlyShortEdges()
+        {
+            TestAssert.AreEqual("abcd...7890", TokenTextFormatter.MaskToken("abcdef1234567890"));
+            TestAssert.AreEqual("***", TokenTextFormatter.MaskToken("short"));
+        }
+
         private static string CreateTempDirectory()
         {
             string dir = Path.Combine(Path.GetTempPath(), "endfield-tests-" + Guid.NewGuid().ToString("N"));

@@ -144,6 +144,13 @@
                                 MinWidth="90"
                                 Click="ReconnectButtonClick"
                                 Margin="0,0,0,10" />
+                        <Button x:Name="TokenManagerButton"
+                                Content="token 管理"
+                                Height="30"
+                                HorizontalAlignment="Left"
+                                MinWidth="90"
+                                Click="TokenManagerButtonClick"
+                                Margin="0,0,0,10" />
                         <TextBlock x:Name="StatusText"
                                    TextWrapping="Wrap"
                                    Foreground="#1F2328"
