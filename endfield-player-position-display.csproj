@@ -55,6 +55,11 @@
     <PackageReference Include="QRCoder" Version="1.8.0" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="$(NuGetPackageRoot)qrcoder\1.8.0\lib\net40\QRCoder.dll" Condition="Exists('$(NuGetPackageRoot)qrcoder\1.8.0\lib\net40\QRCoder.dll')">
+      <LogicalName>EmbeddedAssemblies.QRCoder.dll</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
     <ApplicationDefinition Include="App.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -168,5 +173,8 @@
   <ItemGroup>
     <Resource Include="Assets\endfield-login-bg.jpg" />
   </ItemGroup>
+  <Target Name="RemoveBundledQRCoderFromOutput" AfterTargets="CopyFilesToOutputDirectory">
+    <Delete Files="$(TargetDir)QRCoder.dll" />
+  </Target>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
